@@ -1,0 +1,52 @@
+name: Build Windows release draft
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pnpm
+        run: npm install --global pnpm@12.4.2
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check release version
+        run: node scripts/version.mjs check "${{ github.ref_name }}"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check frontend
+        run: pnpm typecheck && pnpm test
+      - name: Check native service
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: MarkFlow ${{ github.ref_name }}
+          releaseBody: 'Windows x64 安装包。安装时可选择目录，更新前请备份数据目录。变更记录见仓库 CHANGELOG.md。当前安装包未签名。'
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          args: --bundles nsis -- --locked
+      - name: Upload SHA-256 checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe)
+          if ($installers.Count -eq 0) { throw 'No installer was generated' }
+          $lines = $installers | ForEach-Object { "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" }
+          Set-Content -LiteralPath SHA256SUMS.txt -Value $lines -Encoding utf8NoBOM
+          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber

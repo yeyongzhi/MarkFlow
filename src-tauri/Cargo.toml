@@ -1,0 +1,39 @@
+[package]
+name = "markflow"
+version = "0.1.0"
+description = "A local Markdown workspace for Windows and macOS"
+edition = "2021"
+
+[lib]
+name = "markflow_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.10"
+tempfile = "3"
+notify = "8"
+trash = "5"
+base64 = "0.22"
+pathdiff = "0.2"
+percent-encoding = "2"
+pulldown-cmark = "0.13"
+
+reqwest = { version = "0.13", features = ["json"] }
+semver = "1"
+argon2 = { version = "0.6", features = ["getrandom"] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+

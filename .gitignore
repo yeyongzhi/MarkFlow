@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.cache/
+src-tauri/target/
+src-tauri/gen/
+public/vendor/
+artifacts/
+*.local
+
+# Local application data and private credentials
+data/
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.p12
+*.key
+SHA256SUMS.txt
+
+website/.vitepress/cache/
+website/.vitepress/dist/
