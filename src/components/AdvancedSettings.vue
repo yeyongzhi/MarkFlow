@@ -1,24 +1,22 @@
 <script setup lang="ts">
 import { computed,onMounted,ref } from 'vue'
+import TemplateManager from './TemplateManager.vue'
 import AppUpdater from './AppUpdater.vue'
-import { toast } from 'vue-sonner'
 import SettingsRow from './SettingsRow.vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Select,SelectTrigger,SelectValue,SelectContent,SelectGroup,SelectItem } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Field,FieldGroup,FieldLabel } from '@/components/ui/field'
 import { useWorkbench } from '@/stores/workbench'
 import { call,message } from '@/services/api'
 import { toolbarItems } from '@/services/writing'
 defineProps<{section:string}>()
-const store=useWorkbench(),p=computed(()=>store.preferences),templateName=ref(''),templateBody=ref(''),error=ref(''),dataDir=ref('')
+const store=useWorkbench(),p=computed(()=>store.preferences),error=ref(''),dataDir=ref('')
 onMounted(async()=>{try{dataDir.value=await call<string>('data_directory')}catch{dataDir.value='当前环境未提供数据目录'}})
 const order=computed(()=>[...p.value.toolbarOrder,...toolbarItems.map(t=>t.id)].filter((id,i,a)=>a.indexOf(id)===i&&toolbarItems.some(t=>t.id===id)))
 function move(id:string,delta:number){const ids=[...order.value],i=ids.indexOf(id),to=i+delta;if(to<0||to>=ids.length)return;ids.splice(i,1);ids.splice(to,0,id);p.value.toolbarOrder=ids}
 async function chooseBackup(){try{const path=await call<string|null>('choose_backup_directory');if(path)p.value.backupDirectory=path}catch(e){error.value=message(e)}}
-function addTemplate(){if(!templateName.value.trim()||!templateBody.value.trim()){error.value='请填写模板名称和内容。';return}if(p.value.templates.length>=30||templateBody.value.length>32000||p.value.templates.reduce((n,t)=>n+t.text.length,0)+templateBody.value.length>256000){error.value='最多 30 个模板，每个不超过 32K 字符，总计不超过 256K 字符。';return}p.value.templates.push({id:crypto.randomUUID(),name:templateName.value.trim(),text:templateBody.value});templateName.value='';templateBody.value='';error.value='';toast.success('模板已添加')}
+
 </script>
 <template><p v-if="error" role="alert" class="text-sm text-destructive">{{error}}</p><template v-if="section==='safety'">
 <SettingsRow label="自动保存" description="停止输入后保存修改；关闭后仍会保护恢复草稿。"><Switch v-model="p.autoSave" aria-label="自动保存"/></SettingsRow>
@@ -36,5 +34,9 @@ function addTemplate(){if(!templateName.value.trim()||!templateBody.value.trim()
 <SettingsRow label="Markdown 语法补全" description="补齐成对括号、引号、代码围栏；列表自动续写。"><Switch v-model="p.syntaxAssist" aria-label="Markdown 语法补全"/></SettingsRow>
 <SettingsRow label="斜杠命令" description="在空行输入 /，选择标题、表格、图片、代码块等。"><Switch v-model="p.slashCommands" aria-label="斜杠命令"/></SettingsRow>
 <SettingsRow label="自动定位当前文档" description="打开文档时展开文件树并定位。"><Switch v-model="p.autoReveal" aria-label="自动定位当前文档"/></SettingsRow>
-<FieldGroup class="py-5"><Field><FieldLabel for="template-name">自定义模板名称</FieldLabel><Input id="template-name" v-model="templateName" maxlength="60"/></Field><Field><FieldLabel for="template-body">模板 Markdown</FieldLabel><Textarea id="template-body" v-model="templateBody" placeholder="支持 {{date}} 和 {{title}} 占位符" class="min-h-36 font-mono"/></Field><Button @click="addTemplate">保存模板</Button><div v-for="t in p.templates" :key="t.id" class="flex items-center justify-between gap-3 rounded-lg border p-3"><span class="truncate" :title="t.name">{{t.name}}</span><Button variant="ghost" :aria-label="`删除模板 ${t.name}`" @click="p.templates=p.templates.filter(x=>x.id!==t.id)">删除</Button></div></FieldGroup>
+</template><template v-if="section==='templates'"><div class="rounded-lg border bg-muted/20 p-4 text-sm leading-7"><p>占位符会在新建文档时自动替换：</p><p><code v-pre>{{title}}</code> → 新文档名称（不含 .md）；<code v-pre>{{date}}</code> → 创建文档当天的日期。</p><p>例如模板填写下面的内容：</p><pre class="mt-2 whitespace-pre-wrap rounded-md bg-muted p-3 text-xs" v-pre># {{title}}
+
+日期：{{date}}
+
+## 正文</pre><p class="mt-2">保存模板后，通过“文件 → 新建文档”或 Ctrl+N，在“文档模板”中选择它。双击标签栏创建的空白临时文档不会套用模板。</p></div><TemplateManager/>
 </template><template v-if="section==='desktop'"><SettingsRow label="关闭到系统托盘" description="关闭按钮隐藏窗口；托盘菜单可显示窗口或保存后退出。"><Switch v-model="p.closeToTray" aria-label="关闭到系统托盘"/></SettingsRow></template><template v-if="section==='about'"><AppUpdater/></template><template v-if="section==='toolbar'"><p class="py-3 text-sm text-muted-foreground">控制格式按钮的顺序和显示。窗口空间不足时会自动折叠为菜单。</p><div v-for="id in order" :key="id" class="flex items-center justify-between gap-3 border-b py-3"><span>{{toolbarItems.find(t=>t.id===id)?.label}}</span><div class="flex items-center gap-2"><Button variant="ghost" size="sm" :disabled="order[0]===id" :aria-label="`上移工具 ${id}`" @click="move(id,-1)">上移</Button><Button variant="ghost" size="sm" :disabled="order.at(-1)===id" :aria-label="`下移工具 ${id}`" @click="move(id,1)">下移</Button><Switch :model-value="!p.toolbarHidden.includes(id)" :aria-label="`显示工具 ${id}`" @update:model-value="v=>p.toolbarHidden=v?p.toolbarHidden.filter(x=>x!==id):[...p.toolbarHidden,id]"/></div></div><Button variant="outline" class="mt-4" @click="p.toolbarOrder=[];p.toolbarHidden=[]">恢复默认工具栏</Button></template></template>

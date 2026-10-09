@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { call, desktop } from '@/services/api'
 import { version as appVersion } from '../../package.json'
 import { ArrowLeftIcon, SunIcon, MoonIcon, MonitorIcon, RotateCcwIcon, PenLineIcon, CodeXmlIcon, Columns2Icon, BookOpenIcon, PaletteIcon, SlidersHorizontalIcon, TypeIcon, TagsIcon, KeyboardIcon, InfoIcon, FileTextIcon, SettingsIcon, CheckIcon, CheckCircle2Icon } from '@lucide/vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -32,18 +33,23 @@ const categories = [
   { value:'safety',label:'保存与备份',icon:FileTextIcon,description:'管理保存策略、历史版本与工作区备份。' },
   { value:'writing',label:'写作',icon:PenLineIcon,description:'配置写作辅助与个人模板。' },
   { value:'toolbar',label:'工具栏',icon:SlidersHorizontalIcon,description:'调整格式工具的顺序和显示。' },
+  { value: 'templates', label: '模板管理', icon: FileTextIcon, description: '保存常用文档结构，在新建文档时选择使用。' },
   { value: 'tags', label: '标签管理', icon: TagsIcon, description: '整理工作区中的文档标签。' },
   { value: 'shortcuts', label: '快捷键', icon: KeyboardIcon, description: '少一点点击，让写作更连贯。' },
   { value: 'about', label: '关于', icon: InfoIcon, description: '一个安静的本地 Markdown 写作空间。' },
   { value:'desktop',label:'其它',icon:MonitorIcon,description:'配置桌面行为与其它偏好。' },
 ]
 const settingsQuery=ref('')
-const settingIndex=[...categories.map(c=>({category:c.value,label:c.label})),...['锁屏密码','新密码','修改密码','移除密码'].map(label=>({category:'privacy',label})),...['最近文档显示数量','最近文档排序'].map(label=>({category:'general',label})),...['正文显示主题','动效强度','降低材质效果','代码自动换行','代码块行号','代码语法高亮'].map(label=>({category:'appearance',label})),...['默认编辑模式','同步滚动','显示顶部菜单','显示工作区侧栏','显示文档大纲'].map(label=>({category:'general',label})),...['界面材质','界面圆角','毛玻璃模糊','显示模式','主题色','全局界面字号','界面密度','背景颜色','正文颜色','代码主题'].map(label=>({category:'appearance',label})),...['正文字体','正文字号','正文行高','代码字体','代码字号'].map(label=>({category:'typography',label})),...['关闭到系统托盘'].map(label=>({category:'desktop',label})),{category:'about',label:'检查更新'},...['自动保存','自动保存延迟','失焦保存','关闭前保存','历史版本保留数量','工作区备份目录','备份保留数量','定期备份'].map(label=>({category:'safety',label})),...['打字机滚动','打字机位置','Markdown 语法补全','斜杠命令','自动定位当前文档','自定义模板名称'].map(label=>({category:'writing',label}))]
+const settingIndex=[...categories.map(c=>({category:c.value,label:c.label})),...['锁屏密码','新密码','修改密码','移除密码'].map(label=>({category:'privacy',label})),...['最近文档显示数量','最近文档排序'].map(label=>({category:'general',label})),...['正文显示主题','动效强度','降低材质效果','代码自动换行','代码块行号','代码语法高亮'].map(label=>({category:'appearance',label})),...['默认编辑模式','同步滚动','显示顶部菜单','显示工作区侧栏','显示文档大纲'].map(label=>({category:'general',label})),...['界面材质','界面圆角','毛玻璃模糊','显示模式','主题色','全局界面字号','界面密度','背景颜色','正文颜色','代码主题'].map(label=>({category:'appearance',label})),...['正文字体','正文字号','正文行高','代码字体','代码字号'].map(label=>({category:'typography',label})),...['关闭到系统托盘'].map(label=>({category:'desktop',label})),{category:'about',label:'检查更新'},...['自动保存','自动保存延迟','失焦保存','关闭前保存','历史版本保留数量','工作区备份目录','备份保留数量','定期备份'].map(label=>({category:'safety',label})),...['打字机滚动','打字机位置','Markdown 语法补全','斜杠命令','自动定位当前文档',].map(label=>({category:'writing',label}))]
+settingIndex.push(...['自定义模板名称','模板 Markdown','占位符'].map(label=>({category:'templates',label})))
 const settingsResults=computed(()=>settingsQuery.value.trim()?settingIndex.filter(s=>s.label.toLowerCase().includes(settingsQuery.value.toLowerCase())):[])
 async function locate(item:{category:string;label:string}){category.value=item.category;settingsQuery.value='';await nextTick();const labels=[...document.querySelectorAll<HTMLElement>('.settings-dialog [data-slot=field-label]')];labels.find(el=>el.textContent?.includes(item.label))?.closest('[data-slot=field]')?.scrollIntoView({block:'center',behavior:'smooth'})}
 const currentCategory = computed(() => categories.find(c => c.value === category.value) || categories[0]!)
 watch(() => props.open, open => { if (open && props.section && categories.some(c => c.value === props.section)) category.value = props.section }, {immediate:true})
 const colors = [{ value:'#277c62',name:'松绿' },{value:'#0d9488',name:'青绿'},{value:'#0891b2',name:'湖蓝'},{value:'#5474b4',name:'雾蓝'},{value:'#4f46e5',name:'靛蓝'},{value:'#8a62a9',name:'紫藤'},{value:'#c026d3',name:'兰紫'},{value:'#b85667',name:'玫瑰'},{value:'#e11d48',name:'绯红'},{value:'#ea580c',name:'橙红'},{value:'#b8773c',name:'琥珀'},{value:'#64748b',name:'岩灰'}]
+const systemFonts=ref<string[]>([]),fontError=ref('')
+const fontOptions=computed(()=>[...new Set(['system-ui','ui-monospace',p.value.bodyFont,p.value.codeFont,...systemFonts.value])].filter(Boolean))
+onMounted(async()=>{if(!desktop){fontError.value='浏览器预览仅提供默认字体；桌面版显示本机字体。';return}try{systemFonts.value=await call<string[]>('list_system_fonts')}catch{fontError.value='系统字体读取失败，保留当前字体和系统默认选项。'}})
 const selectedColor = computed(() => colors.find(color => color.value === p.value.accent.toLowerCase())?.name || '自定义')
 const viewIcons = { live: PenLineIcon, source: CodeXmlIcon, split: Columns2Icon, preview: BookOpenIcon }
 const uiSizes = [{value:12,label:'小'},{value:14,label:'标准'},{value:16,label:'大'},{value:18,label:'特大'}]
@@ -89,18 +95,18 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
               <div class="mt-4 rounded-xl border border-border/70 bg-muted/30 p-5"><p class="text-[11px] text-muted-foreground">主题预览</p><div class="mt-3 flex items-center gap-3"><div class="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground"><FileTextIcon class="size-4" /></div><div><p class="text-sm font-medium">一份新的写作灵感</p><p class="mt-1 text-xs text-muted-foreground">主题色用于选中状态与重要入口</p></div></div></div>
             </TabsContent>
             <TabsContent value="typography" class="m-0 outline-none">
-              <FieldGroup class="gap-0">
-                <SettingsRow id="bodyFont" label="正文字体" description="字体未安装时，会自动使用系统字体。"><Input id="bodyFont" v-model="p.bodyFont" list="body-fonts" /></SettingsRow>
+              <p v-if="fontError" class="py-2 text-xs text-muted-foreground">{{fontError}}</p><FieldGroup class="gap-0">
+                <SettingsRow id="bodyFont" label="正文字体" description="选择本机已安装字体，或跟随系统默认字体。"><Select v-model="p.bodyFont"><SelectTrigger id="bodyFont" aria-label="正文字体" class="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="font in fontOptions" :key="font" :value="font">{{font==='system-ui'?'系统默认字体':font==='ui-monospace'?'系统等宽字体':font}}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <SettingsRow label="正文字号"><SettingsNumberSelect v-model="p.bodySize" :min="10" :max="36" :presets="bodySizes" label="正文字号" /></SettingsRow>
                 <SettingsRow label="正文行高" description="应用于可视化编辑和阅读预览。"><Select :model-value="String(p.lineHeight)" @update:model-value="v => p.lineHeight = Number(v)"><SelectTrigger aria-label="正文行高"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="height in [...new Set([1.4,1.6,1.8,1.9,2,2.2,2.5,p.lineHeight])].sort()" :key="height" :value="String(height)">{{ height }} 倍{{ height === 1.9 ? '（默认）' : '' }}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <SettingsRow label="正文宽度" description="标准模式保持约 760px 的阅读宽度。"><Select v-model="p.documentStyle"><SelectTrigger aria-label="文档显示样式"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="standard">标准模式</SelectItem><SelectItem value="wide">超宽模式</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <div class="my-4 overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-5"><p class="mb-3 text-[11px] text-muted-foreground">排版预览</p><p class="break-words font-[family-name:var(--body-font)] text-[length:var(--body-size)] leading-[var(--body-line-height)]">把想法写下来，让文字慢慢长出来。<br />A quiet space for your next idea.</p></div>
-                <SettingsRow id="codeFont" label="源码 / 代码字体"><Input id="codeFont" v-model="p.codeFont" list="code-fonts" /></SettingsRow>
+                <SettingsRow id="codeFont" label="源码 / 代码字体"><Select v-model="p.codeFont"><SelectTrigger id="codeFont" aria-label="源码 / 代码字体" class="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="font in fontOptions" :key="font" :value="font">{{font==='system-ui'?'系统默认字体':font==='ui-monospace'?'系统等宽字体':font}}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <SettingsRow label="源码 / 代码字号"><SettingsNumberSelect v-model="p.codeSize" :min="10" :max="36" :presets="uiSizes" label="源码 / 代码字号" /></SettingsRow>
                 <SettingsRow id="line-numbers" label="显示行号" description="源码显示行号，其余视图显示内容块的起始行号。"><div class="flex justify-end"><Switch id="line-numbers" v-model="p.lineNumbers" /></div></SettingsRow>
               </FieldGroup>
             </TabsContent>
-            <TabsContent v-for="section in ['safety','writing','toolbar','desktop']" :key="section" :value="section" class="settings-content m-0 px-7 pb-8"><AdvancedSettings :section="section"/></TabsContent>
+            <TabsContent v-for="section in ['safety','writing','templates','toolbar','desktop']" :key="section" :value="section" class="settings-content m-0 px-7 pb-8"><AdvancedSettings :section="section"/></TabsContent>
           <TabsContent value="tags" class="m-0 pt-5 outline-none"><TagManager @busy="tagBusy = $event" /></TabsContent>
             <TabsContent value="shortcuts" class="m-0 pt-4 outline-none"><dl class="flex flex-col"><div v-for="[label, shortcut] in shortcuts" :key="label" class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 py-4 last:border-0"><dt class="text-sm">{{ label }}</dt><dd><kbd class="rounded-md border border-border bg-muted/50 px-2 py-1 text-xs text-muted-foreground">{{ shortcut }}</kbd></dd></div></dl></TabsContent>
             <TabsContent value="about" class="m-0 pt-6 outline-none"><div class="flex flex-col items-start gap-5"><img src="/markflow.svg" alt="MarkFlow" class="size-14 rounded-2xl" /><div class="flex items-center gap-3"><h3 class="text-2xl font-semibold tracking-tight">MarkFlow</h3><Badge variant="secondary">v{{ appVersion }}</Badge></div><p class="max-w-md text-sm leading-7 text-muted-foreground">本地 Markdown 编辑器。让注意力回到文字，让文档留在你自己的文件夹里。</p><div class="rounded-xl border border-border/70 bg-muted/25 p-5 text-xs leading-6 text-muted-foreground">文档以 Markdown 文件保存，图片附件使用相对路径。<br />支持可视化、源码、分屏和阅读预览。</div><AdvancedSettings section="about" class="w-full"/></div></TabsContent>
@@ -108,6 +114,5 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
           <div class="flex shrink-0 items-center justify-between gap-3 border-t border-border/60 px-6 py-4 sm:px-8"><Button v-if="resetKeys[category]" variant="ghost" size="sm" :disabled="tagBusy" @click="resetCategory"><RotateCcwIcon data-icon="inline-start" />恢复此分类默认设置</Button><span v-else class="text-xs text-muted-foreground">MarkFlow · 本地优先</span></div>
         </div>
       </Tabs>
-      <datalist id="body-fonts"><option>system-ui</option><option>Microsoft YaHei</option><option>PingFang SC</option><option>SimSun</option><option>Georgia</option></datalist><datalist id="code-fonts"><option>ui-monospace</option><option>Cascadia Code</option><option>Consolas</option><option>Menlo</option><option>Monaco</option></datalist>
     </section>
 </template>
