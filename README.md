@@ -54,11 +54,7 @@ Windows 已完成真实 Tauri/WebView2 集成验证。macOS 已配置构建，�
 - 删除文件/目录、批量标签、编码转换、丢弃恢复草稿产生可恢复材料；恢复前检查目标，不覆盖随后产生的修改。
 - UTF-8、UTF-8 BOM、UTF-16LE/BE BOM 和 LF/CRLF 可检测、保留与显式转换。无 BOM 的旧式编码不会猜测转换。
 
-更新入口默认离线。发布者需提供 HTTPS JSON 清单，例如：
-
-    {"version":"0.2.0","notes":"本次更新内容","url":"https://example.com/MarkFlow-0.2.0-setup.exe"}
-
-发现新版本后显示说明，由用户打开下载页面选择安装时机；当前没有自动下载或静默安装。未配置发布服务时会明确提示。
+更新检查内置 MarkFlow 官方 GitHub Releases，无需填写地址。点击“检查更新”会联网查询最新公开正式版本并显示说明；草稿和预发布不作为正式更新。首版尚未发布时显示相应提示，发现更新后可打开下载页面安装。已接入 Tauri updater，发现新版后可点击下载并安装；安装前保存文档并验证更新包签名。
 
 详细范围与验证见 [本轮验收清单](docs/roadmap-implementation.md)。
 
@@ -160,3 +156,5 @@ docs/                       产品需求、实现架构、验证记录
 源码位于 `website/`。运行 `pnpm docs:dev` 本地查看，`pnpm docs:build` 生成静态站点。main 分支通过 GitHub Actions 部署 Pages，dev 和 PR 只验证构建。仓库 Settings → Pages 的 Source 需选择 GitHub Actions。
 
 产品名称已改为 MarkFlow。内部应用标识 `com.lexly.editor` 和既有数据键保留，以兼容早期配置和历史记录。
+
+更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。

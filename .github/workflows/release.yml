@@ -30,13 +30,23 @@ jobs:
         run: pnpm typecheck && pnpm test
       - name: Check native service
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
+      - name: Require updater signing secret
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) { throw 'Configure TAURI_SIGNING_PRIVATE_KEY before releasing' }
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: MarkFlow ${{ github.ref_name }}
-          releaseBody: 'Windows x64 安装包。安装时可选择目录，更新前请备份数据目录。变更记录见仓库 CHANGELOG.md。当前安装包未签名。'
+          releaseBody: 'Windows x64 安装包。安装时可选择目录，更新前请备份数据目录。变更记录见仓库 CHANGELOG.md。更新包包含 Tauri 签名，安装程序尚未配置 Windows 代码签名。'
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           args: --bundles nsis -- --locked

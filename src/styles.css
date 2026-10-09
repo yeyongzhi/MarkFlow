@@ -235,7 +235,7 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); o
 .markdown-body hr { border-top: 1px solid var(--border); margin: 1.6em 0; }
 .is-split .markdown-body, .is-split .source-editor { padding-left: max(24px, calc((100% - 760px) / 2)); padding-right: max(24px, calc((100% - 760px) / 2)); }
 .editor-pane[data-document-style=wide] .is-split .markdown-body, .editor-pane[data-document-style=wide] .is-split .source-editor { padding-left: 24px; padding-right: 24px; }
-.welcome-empty { margin: auto; max-width: 560px; }
+.welcome-empty { margin: auto; width: 100%; max-width: 760px; }
 .welcome-empty [data-slot=empty-title] { font-size: calc(23px * var(--ui-scale, 1)); letter-spacing: -.5px; }
 .welcome-empty [data-slot=empty-description] { line-height: 1.9; font-size: calc(13px * var(--ui-scale, 1)); }
 .save-alert { margin: 10px 14px 0; width: auto; }
@@ -278,8 +278,12 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); o
 .lexly-format-toolbar.vditor-toolbar { @apply static flex h-auto min-h-8 items-center justify-start border-0 bg-transparent p-0!; }
 .lexly-format-toolbar.vditor-toolbar .vditor-toolbar__item { @apply px-0.5; }
 .lexly-format-toolbar.vditor-toolbar button[data-type] { @apply flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring; }
-.lexly-format-toolbar.vditor-toolbar .vditor-hint { @apply z-50 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg; }
-.lexly-format-toolbar.vditor-toolbar .vditor-hint button { @apply h-auto w-full rounded-md px-3 py-2 text-left text-sm text-popover-foreground hover:bg-muted; }
+.lexly-format-toolbar.vditor-toolbar .vditor-hint { @apply z-50 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg; margin-top: 6px; }
+.lexly-format-toolbar.vditor-toolbar .vditor-panel--arrow::before { display: none; }
+.lexly-format-toolbar.vditor-toolbar .vditor-hint button { @apply h-auto w-full rounded-md px-3 py-1.5 text-left text-sm text-popover-foreground transition-colors duration-150; }
+/* Override Vditor's important hover colors, which otherwise match the panel background. */
+.lexly-format-toolbar.vditor-toolbar .vditor-hint button:not(.vditor-menu--disabled):is(:hover, :focus-visible),
+.lexly-format-toolbar.vditor-toolbar .vditor-hint .vditor-hint--current { background-color: var(--accent) !important; color: var(--accent-foreground) !important; }
 .lexly-format-toolbar.vditor-toolbar svg { @apply size-3.5 fill-current; }
 .lexly-format-toolbar.vditor-toolbar .vditor-menu--current { @apply bg-accent text-accent-foreground; }
 .lexly-format-toolbar.vditor-toolbar .vditor-toolbar__divider { @apply mx-1.5 h-4 border-border; }

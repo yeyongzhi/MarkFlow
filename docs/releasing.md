@@ -60,14 +60,12 @@ git push origin v0.1.0
 
 ## 应用内更新
 
-当前是手动检查 HTTPS JSON 清单、提示版本并打开下载链接；不自动下载安装。GitHub 的 releases/latest API 返回结构与本项目清单不同，不能直接填入。
+当前已内置 https://api.github.com/repos/yeyongzhi/MarkFlow/releases/latest。用户无需填写地址；点击检查时联网，无公开正式版本时显示提示。公开 Release 的 tag 必须为 SemVer（例如 v0.2.0）；不采纳草稿或预发布。
 
-```json
-{"version":"0.2.0","notes":"更新说明","url":"https://github.com/OWNER/REPO/releases/tag/v0.2.0"}
-```
-
-清单可放在受控的 raw.githubusercontent.com 或 GitHub Pages 直达地址，需确认返回 JSON 且没有重定向（当前请求禁止重定向）。本次没有配置仓库地址或默认更新清单，也不生成自动更新签名。将来采用 Tauri updater 时需另外管理签名私钥和公钥。
+发现新版本后，可在应用内下载并安装。已接入 Tauri updater 和更新签名。公钥随应用打包，私钥仅存于本地 .local/updater.key（已忽略）。首次远端发布前，维护者需将该私钥内容配置为 TAURI_SIGNING_PRIVATE_KEY Secret；当前私钥无密码，TAURI_SIGNING_PRIVATE_KEY_PASSWORD 留空。更新签名与 Windows Authenticode 代码签名是两套机制。
 
 参考：[Tauri Windows 安装器](https://v2.tauri.app/distribute/windows-installer/)、[Tauri 构建与 Release Action](https://github.com/tauri-apps/tauri-action)。
 
 产品名称已改为 MarkFlow，可执行文件为 markflow.exe。内部标识 com.lexly.editor 和数据键保留以兼容早期配置。website/ 为产品站源码，main 配置部署 Pages，dev/PR 只验证构建。本次仅本地准备，未推送分支或标签。
+
+更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。

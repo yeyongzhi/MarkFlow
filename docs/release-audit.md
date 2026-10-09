@@ -24,7 +24,7 @@ Windows 桌面核心流程具备实现和自动化验证证据，适合在完成
 2. **AppData 回退的边界。** 明确环境变量目录无效时会报错，不自动忽略用户指定位置。已有不可写 sidecar 现在可回退，但旧 sidecar 配置不会自动搬到 AppData；需手动迁移。迁移仅从 Tauri 默认 AppData 复制，不能保证任意安装目录搬迁。
 3. **迁移中断恢复不足。** `migrate_legacy_data` 遇到已存在 preferences/workspaces 就跳过；复制中途失败后，下次可能因部分文件存在而跳过剩余迁移。建议后续改为暂存目录+完成标记的迁移协议，首版升级需完整备份。未在本次改写大范围迁移策略。
 4. **锁屏不是加密。** `privacy.rs` 使用 Argon2 密码校验并限制连续尝试，但 Markdown、配置、草稿和历史保持明文；不能宣传为加密笔记。
-5. **更新清单需另行提供。** `check_release` 只接受自定义 JSON、禁重定向，没有自动更新签名/下载。直接填写 GitHub latest API 或常见重定向下载清单地址不能正常检查。
+5. **更新源与签名安装已接入。** check_release 读取官方 GitHub Releases，用户不再配置地址；没有公开正式版本时显示提示。Tauri updater 与更新签名已接入，首次远端发布前需配置私钥 Secret。完整跨版本安装和 GitHub 工作流仍需实测。
 6. **许可证/签名/平台范围待确定。** 按用户决定暂不添加 LICENSE。依赖许可和 notices 未做完整汇总；本次未执行在线漏洞数据库审计。Windows 未签名，macOS 未做真机与签名公证验证。首版仅 Windows x64 更容易控制验收范围。
 7. **可维护性和冗余。** App.vue、EditorPane.vue、workbench.ts、lib.rs 承担较多职责，一些逻辑压缩成单行，阅读和变更成本较高。组件库含预置组件，不应仅因当前入口未引用就批量删除。未使用变量检查通过不代表所有不可达代码都已排除。
 8. **样式一致性与性能。** 主要面板共享 Tailwind/shadcn tokens，Vditor 和导出 HTML 仍各有专用样式；导出页面不完全等同编辑界面。主 bundle 和 Mermaid/ELK 图表资源较大，后续可测量启动时间和按需加载，避免仅以体积断定性能问题。
@@ -44,3 +44,5 @@ Windows 桌面核心流程具备实现和自动化验证证据，适合在完成
 UI 与原生测试仅操作 artifacts 下的隔离测试工作区，没有访问个人笔记。旧验证记录见 `docs/verification.md`，不将旧结果冒充本次安装验收。
 
 产品名称已改为 MarkFlow，可执行文件为 markflow.exe。内部标识 com.lexly.editor 和数据键保留以兼容早期配置。website/ 为产品站源码，main 配置部署 Pages，dev/PR 只验证构建。本次仅本地准备，未推送分支或标签。
+
+更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。

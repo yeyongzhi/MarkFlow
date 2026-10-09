@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
 import { version as appVersion } from '../../package.json'
-import { SunIcon, MoonIcon, MonitorIcon, RotateCcwIcon, PenLineIcon, CodeXmlIcon, Columns2Icon, BookOpenIcon, PaletteIcon, SlidersHorizontalIcon, TypeIcon, TagsIcon, KeyboardIcon, InfoIcon, FileTextIcon, SettingsIcon, CheckIcon, CheckCircle2Icon } from '@lucide/vue'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { ArrowLeftIcon, SunIcon, MoonIcon, MonitorIcon, RotateCcwIcon, PenLineIcon, CodeXmlIcon, Columns2Icon, BookOpenIcon, PaletteIcon, SlidersHorizontalIcon, TypeIcon, TagsIcon, KeyboardIcon, InfoIcon, FileTextIcon, SettingsIcon, CheckIcon, CheckCircle2Icon } from '@lucide/vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -30,20 +29,20 @@ const categories = [
   { value: 'general', label: '通用', icon: SlidersHorizontalIcon, description: '调整工作区布局与日常编辑习惯。' },
   { value: 'appearance', label: '外观', icon: PaletteIcon, description: '选择适合你的主题与界面尺寸。' },
   { value: 'typography', label: '排版', icon: TypeIcon, description: '让文字以舒服的字体、字号和行距呈现。' },
-  { value:'desktop',label:'桌面与更新',icon:MonitorIcon,description:'配置系统托盘和更新提示。' },
   { value:'safety',label:'保存与备份',icon:FileTextIcon,description:'管理保存策略、历史版本与工作区备份。' },
   { value:'writing',label:'写作',icon:PenLineIcon,description:'配置写作辅助与个人模板。' },
   { value:'toolbar',label:'工具栏',icon:SlidersHorizontalIcon,description:'调整格式工具的顺序和显示。' },
   { value: 'tags', label: '标签管理', icon: TagsIcon, description: '整理工作区中的文档标签。' },
   { value: 'shortcuts', label: '快捷键', icon: KeyboardIcon, description: '少一点点击，让写作更连贯。' },
   { value: 'about', label: '关于', icon: InfoIcon, description: '一个安静的本地 Markdown 写作空间。' },
+  { value:'desktop',label:'其它',icon:MonitorIcon,description:'配置桌面行为与其它偏好。' },
 ]
 const settingsQuery=ref('')
-const settingIndex=[...categories.map(c=>({category:c.value,label:c.label})),...['锁屏密码','新密码','修改密码','移除密码'].map(label=>({category:'privacy',label})),...['最近文档显示数量','最近文档排序'].map(label=>({category:'general',label})),...['正文显示主题','动效强度','降低材质效果','代码自动换行','代码块行号','代码语法高亮'].map(label=>({category:'appearance',label})),...['默认编辑模式','同步滚动','显示顶部菜单','显示工作区侧栏','显示文档大纲'].map(label=>({category:'general',label})),...['界面材质','界面圆角','毛玻璃模糊','显示模式','主题色','全局界面字号','界面密度','背景颜色','正文颜色','代码主题'].map(label=>({category:'appearance',label})),...['正文字体','正文字号','正文行高','代码字体','代码字号'].map(label=>({category:'typography',label})),...['关闭到系统托盘','更新发布地址','检查更新'].map(label=>({category:'desktop',label})),...['自动保存','自动保存延迟','失焦保存','关闭前保存','历史版本保留数量','工作区备份目录','备份保留数量','定期备份'].map(label=>({category:'safety',label})),...['打字机滚动','打字机位置','Markdown 语法补全','斜杠命令','自动定位当前文档','自定义模板名称'].map(label=>({category:'writing',label}))]
+const settingIndex=[...categories.map(c=>({category:c.value,label:c.label})),...['锁屏密码','新密码','修改密码','移除密码'].map(label=>({category:'privacy',label})),...['最近文档显示数量','最近文档排序'].map(label=>({category:'general',label})),...['正文显示主题','动效强度','降低材质效果','代码自动换行','代码块行号','代码语法高亮'].map(label=>({category:'appearance',label})),...['默认编辑模式','同步滚动','显示顶部菜单','显示工作区侧栏','显示文档大纲'].map(label=>({category:'general',label})),...['界面材质','界面圆角','毛玻璃模糊','显示模式','主题色','全局界面字号','界面密度','背景颜色','正文颜色','代码主题'].map(label=>({category:'appearance',label})),...['正文字体','正文字号','正文行高','代码字体','代码字号'].map(label=>({category:'typography',label})),...['关闭到系统托盘'].map(label=>({category:'desktop',label})),{category:'about',label:'检查更新'},...['自动保存','自动保存延迟','失焦保存','关闭前保存','历史版本保留数量','工作区备份目录','备份保留数量','定期备份'].map(label=>({category:'safety',label})),...['打字机滚动','打字机位置','Markdown 语法补全','斜杠命令','自动定位当前文档','自定义模板名称'].map(label=>({category:'writing',label}))]
 const settingsResults=computed(()=>settingsQuery.value.trim()?settingIndex.filter(s=>s.label.toLowerCase().includes(settingsQuery.value.toLowerCase())):[])
 async function locate(item:{category:string;label:string}){category.value=item.category;settingsQuery.value='';await nextTick();const labels=[...document.querySelectorAll<HTMLElement>('.settings-dialog [data-slot=field-label]')];labels.find(el=>el.textContent?.includes(item.label))?.closest('[data-slot=field]')?.scrollIntoView({block:'center',behavior:'smooth'})}
 const currentCategory = computed(() => categories.find(c => c.value === category.value) || categories[0]!)
-watch(() => props.open, open => { if (open && props.section && categories.some(c => c.value === props.section)) category.value = props.section })
+watch(() => props.open, open => { if (open && props.section && categories.some(c => c.value === props.section)) category.value = props.section }, {immediate:true})
 const colors = [{ value:'#277c62',name:'松绿' },{value:'#0d9488',name:'青绿'},{value:'#0891b2',name:'湖蓝'},{value:'#5474b4',name:'雾蓝'},{value:'#4f46e5',name:'靛蓝'},{value:'#8a62a9',name:'紫藤'},{value:'#c026d3',name:'兰紫'},{value:'#b85667',name:'玫瑰'},{value:'#e11d48',name:'绯红'},{value:'#ea580c',name:'橙红'},{value:'#b8773c',name:'琥珀'},{value:'#64748b',name:'岩灰'}]
 const selectedColor = computed(() => colors.find(color => color.value === p.value.accent.toLowerCase())?.name || '自定义')
 const viewIcons = { live: PenLineIcon, source: CodeXmlIcon, split: Columns2Icon, preview: BookOpenIcon }
@@ -55,22 +54,17 @@ function resetCategory() { for (const key of resetKeys[category.value] || []) Ob
 const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / Cmd + N'], ['保存文档','Ctrl / Cmd + S'], ['关闭当前标签','Ctrl / Cmd + W'], ['快速打开文档','Ctrl / Cmd + P'], ['查找与替换','Ctrl / Cmd + F'], ['工作区全文搜索','Ctrl / Cmd + Shift + F'], ['专注模式','Ctrl / Cmd + Shift + Enter'], ['打开设置','Ctrl / Cmd + ,'], ['关闭弹窗 / 退出专注模式','Esc'] ]
 </script>
 <template>
-  <Dialog :open="open" @update:open="v => { if (!tagBusy) emit('update:open', v) }">
-    <DialogContent class="settings-dialog flex h-[min(720px,calc(100dvh-48px))] max-h-[calc(100dvh-48px)] flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[960px]" @escape-key-down="e => { if (tagBusy) e.preventDefault() }" @interact-outside="e => { if (tagBusy) e.preventDefault() }">
-      <DialogHeader class="flex shrink-0 flex-row items-center gap-3 border-b border-border/70 px-6 py-5 text-left">
-        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground"><SettingsIcon class="size-5" /></div>
-        <div class="flex flex-col gap-1"><DialogTitle>设置</DialogTitle><DialogDescription class="text-xs">让 MarkFlow 更贴合你的写作习惯</DialogDescription></div>
-      </DialogHeader>
-      <div class="relative border-b px-6 py-2"><Input v-model="settingsQuery" aria-label="搜索设置" placeholder="搜索设置，例如自动保存、字体…"/><div v-if="settingsQuery" class="absolute inset-x-6 top-full z-10 max-h-64 overflow-auto rounded-lg border bg-popover p-1 shadow-lg"><Button v-for="item in settingsResults" :key="item.category+item.label" variant="ghost" class="w-full justify-start" @click="locate(item)">{{item.label}}<span class="ml-auto text-xs text-muted-foreground">{{categories.find(c=>c.value===item.category)?.label}}</span></Button><p v-if="!settingsResults.length" class="p-3 text-sm text-muted-foreground">没有匹配设置。</p></div></div>
+  <section v-show="open" class="settings-dialog flex min-h-0 flex-1 flex-col overflow-hidden bg-background" aria-label="设置">
       <Tabs v-model="category" orientation="vertical" class="min-h-0 flex-1 gap-0 overflow-hidden">
         <aside class="flex min-h-0 w-[150px] shrink-0 flex-col gap-4 border-r border-border/60 bg-muted/35 p-3 sm:w-[190px] sm:p-4">
-          <p class="px-2 pt-1 text-[11px] font-medium tracking-wider text-muted-foreground">偏好设置</p>
+          <Button variant="ghost" class="justify-start" :disabled="tagBusy" @click="emit('update:open',false)"><ArrowLeftIcon/>返回应用</Button><p class="px-2 pt-1 text-[11px] font-medium tracking-wider text-muted-foreground">设置</p>
           <TabsList variant="navigation" aria-label="设置分类" class="min-h-0 w-full flex-1 justify-start overflow-y-auto overflow-x-hidden">
             <TabsTrigger v-for="item in categories" :key="item.value" :value="item.value" :disabled="tagBusy" class="h-10 flex-none justify-start gap-3 px-3"><component :is="item.icon" />{{ item.label }}</TabsTrigger>
           </TabsList>
           <div class="mt-auto flex items-center gap-2 px-2 pb-1 text-xs text-muted-foreground"><CheckCircle2Icon class="size-3.5 shrink-0" />修改后自动保存</div>
         </aside>
-        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col">      <div class="relative border-b px-6 py-2"><Input v-model="settingsQuery" aria-label="搜索设置" placeholder="搜索设置，例如自动保存、字体…"/><div v-if="settingsQuery" class="absolute inset-x-6 top-full z-10 max-h-64 overflow-auto rounded-lg border bg-popover p-1 shadow-lg"><Button v-for="item in settingsResults" :key="item.category+item.label" variant="ghost" class="w-full justify-start" @click="locate(item)">{{item.label}}<span class="ml-auto text-xs text-muted-foreground">{{categories.find(c=>c.value===item.category)?.label}}</span></Button><p v-if="!settingsResults.length" class="p-3 text-sm text-muted-foreground">没有匹配设置。</p></div></div>
+
           <div class="shrink-0 px-6 pt-6 sm:px-8"><h2 class="text-lg font-semibold tracking-tight">{{ currentCategory.label }}</h2><p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">{{ currentCategory.description }}</p></div>
           <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-2 sm:px-8" :key="category">
             <TabsContent value="privacy"><PrivacySettings/></TabsContent>
@@ -109,12 +103,11 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
             <TabsContent v-for="section in ['safety','writing','toolbar','desktop']" :key="section" :value="section" class="settings-content m-0 px-7 pb-8"><AdvancedSettings :section="section"/></TabsContent>
           <TabsContent value="tags" class="m-0 pt-5 outline-none"><TagManager @busy="tagBusy = $event" /></TabsContent>
             <TabsContent value="shortcuts" class="m-0 pt-4 outline-none"><dl class="flex flex-col"><div v-for="[label, shortcut] in shortcuts" :key="label" class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 py-4 last:border-0"><dt class="text-sm">{{ label }}</dt><dd><kbd class="rounded-md border border-border bg-muted/50 px-2 py-1 text-xs text-muted-foreground">{{ shortcut }}</kbd></dd></div></dl></TabsContent>
-            <TabsContent value="about" class="m-0 pt-6 outline-none"><div class="flex flex-col items-start gap-5"><img src="/markflow.svg" alt="MarkFlow" class="size-14 rounded-2xl" /><div class="flex items-center gap-3"><h3 class="text-2xl font-semibold tracking-tight">MarkFlow</h3><Badge variant="secondary">v{{ appVersion }}</Badge></div><p class="max-w-md text-sm leading-7 text-muted-foreground">本地 Markdown 编辑器。让注意力回到文字，让文档留在你自己的文件夹里。</p><div class="rounded-xl border border-border/70 bg-muted/25 p-5 text-xs leading-6 text-muted-foreground">文档以 Markdown 文件保存，图片附件使用相对路径。<br />支持可视化、源码、分屏和阅读预览。</div></div></TabsContent>
+            <TabsContent value="about" class="m-0 pt-6 outline-none"><div class="flex flex-col items-start gap-5"><img src="/markflow.svg" alt="MarkFlow" class="size-14 rounded-2xl" /><div class="flex items-center gap-3"><h3 class="text-2xl font-semibold tracking-tight">MarkFlow</h3><Badge variant="secondary">v{{ appVersion }}</Badge></div><p class="max-w-md text-sm leading-7 text-muted-foreground">本地 Markdown 编辑器。让注意力回到文字，让文档留在你自己的文件夹里。</p><div class="rounded-xl border border-border/70 bg-muted/25 p-5 text-xs leading-6 text-muted-foreground">文档以 Markdown 文件保存，图片附件使用相对路径。<br />支持可视化、源码、分屏和阅读预览。</div><AdvancedSettings section="about" class="w-full"/></div></TabsContent>
           </div>
-          <div class="flex shrink-0 items-center justify-between gap-3 border-t border-border/60 px-6 py-4 sm:px-8"><Button v-if="resetKeys[category]" variant="ghost" size="sm" :disabled="tagBusy" @click="resetCategory"><RotateCcwIcon data-icon="inline-start" />恢复此分类默认设置</Button><span v-else class="text-xs text-muted-foreground">MarkFlow · 本地优先</span><Button variant="outline" size="sm" :disabled="tagBusy" @click="emit('update:open', false)">完成</Button></div>
+          <div class="flex shrink-0 items-center justify-between gap-3 border-t border-border/60 px-6 py-4 sm:px-8"><Button v-if="resetKeys[category]" variant="ghost" size="sm" :disabled="tagBusy" @click="resetCategory"><RotateCcwIcon data-icon="inline-start" />恢复此分类默认设置</Button><span v-else class="text-xs text-muted-foreground">MarkFlow · 本地优先</span></div>
         </div>
       </Tabs>
       <datalist id="body-fonts"><option>system-ui</option><option>Microsoft YaHei</option><option>PingFang SC</option><option>SimSun</option><option>Georgia</option></datalist><datalist id="code-fonts"><option>ui-monospace</option><option>Cascadia Code</option><option>Consolas</option><option>Menlo</option><option>Monaco</option></datalist>
-    </DialogContent>
-  </Dialog>
+    </section>
 </template>

@@ -37,3 +37,5 @@ pnpm docs:build
 在仓库 Settings → Pages 中选择 GitHub Actions。工作流构建 `website`，并部署到 `https://yeyongzhi.github.io/MarkFlow/`。站点资源基路径为 `/MarkFlow/`。
 
 许可证尚未确定。发布准备、签名和安装验收见仓库中的 `docs/releasing.md`。
+
+更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。

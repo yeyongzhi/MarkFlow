@@ -45,7 +45,7 @@ jobs:
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
       - uses: tauri-apps/tauri-action@v1
         with:
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config "${{ github.workspace }}/src-tauri/tauri.ci.conf.json"
       - uses: actions/upload-artifact@v4
         with:
           name: MarkFlow-${{ matrix.target }}

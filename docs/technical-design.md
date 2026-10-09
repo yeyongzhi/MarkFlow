@@ -187,7 +187,7 @@ CSP 限制脚本及资源为本地来源，图片仅允许本地、data / blob�
 
 ## 10. 构建、验证与后续
 
-Windows 使用 NSIS 当前用户安装（无需管理员，可在向导中选择安装目录如 `D:\Program\MarkFlow`），中 / 英语言选择；macOS 最低配置为 12，构建 app / dmg。GitHub Actions 分别配置 Windows x64、macOS arm64 和 x64，仅上传构建产物。没有自动更新、签名证书配置或 Release 发布操作。
+Windows 使用 NSIS 当前用户安装（无需管理员，可在向导中选择安装目录如 `D:\Program\MarkFlow`），中 / 英语言选择；macOS 最低配置为 12，构建 app / dmg。GitHub Actions 分别配置 Windows x64、macOS arm64 和 x64，日常流程上传构建产物，版本标签流程创建 Windows Release 草稿。更新检查直接读取官方 GitHub Releases；已接入 Tauri updater 签名下载和安装；安装程序尚未配置 Windows 代码签名。
 
 Windows 原生自动化使用 debug-only `LEXLY_DEV_DATA_DIR` 与 `LEXLY_DEV_HEADLESS` 测试隔离；release 构建忽略这两个变量，但接受 `LEXLY_DATA_DIR` 指定数据目录，打包冒烟检查（`scripts/verify-release.mjs`）据此落在 `artifacts/release-data/`。测试目录与正文均位于项目 `artifacts/`，不会使用个人工作区。结果见 [验证记录](verification.md)。
 

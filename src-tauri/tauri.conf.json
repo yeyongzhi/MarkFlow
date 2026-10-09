@@ -10,7 +10,17 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "MarkFlow", "decorations": false, "width": 1280, "height": 820, "minWidth": 680, "minHeight": 480 }],
+    "windows": [
+      {
+        "label": "main",
+        "title": "MarkFlow",
+        "decorations": false,
+        "width": 1280,
+        "height": 820,
+        "minWidth": 680,
+        "minHeight": 480
+      }
+    ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost 'self'; object-src 'none'; frame-src 'self'; worker-src 'self' blob:; base-uri 'self'",
       "devCsp": "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost 'self' ws://127.0.0.1:1420; object-src 'none'; frame-src 'self'; worker-src 'self' blob:"
@@ -20,8 +30,38 @@
     "active": true,
     "targets": "all",
     "shortDescription": "本地 Markdown 工作区",
-    "macOS": { "minimumSystemVersion": "12.0" },
-    "windows": { "nsis": { "installMode": "currentUser", "languages": ["SimpChinese", "English"], "displayLanguageSelector": true, "installerHooks": "installer-hooks.nsh" } },
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "SimpChinese",
+          "English"
+        ],
+        "displayLanguageSelector": true,
+        "installerHooks": "installer-hooks.nsh"
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwRThGODUwNUU2RDVCNzUKUldSMVcyMWVVUGpvUU1nZlJrNlpGY3dqZVljb2RKU1NOMlowK2RGL1FmUGFhNE9tSDdWdE11UEYK",
+      "endpoints": [
+        "https://github.com/yeyongzhi/MarkFlow/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

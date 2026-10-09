@@ -20,11 +20,11 @@ export const useWorkbench = defineStore('workbench', () => {
   function persist() {
     if (!ready.value) return
     clearTimeout(prefTimer); prefTimer = setTimeout(() => {
-      const snapshot = JSON.parse(JSON.stringify({ ...preferences.value, tabs: documents.value.map(d => ({ workspaceId: d.workspaceId, path: d.path, view: d.view, pinned:d.pinned, absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined })), activePath: active.value ? `${active.value.workspaceId}|${active.value.path}` : '' }))
+      const snapshot = JSON.parse(JSON.stringify({ ...preferences.value, tabs: documents.value.filter(d=>!d.temporary).map(d => ({ workspaceId: d.workspaceId, path: d.path, view: d.view, pinned:d.pinned, absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined })), activePath: active.value ? `${active.value.workspaceId}|${active.value.path}` : '' }))
       prefFlight = prefFlight.catch(() => {}).then(() => call('save_preferences', { preferences: snapshot })).then(() => {}).catch(e => { toast.error(`设置保存失败：${message(e)}`) })
     }, 200)
   }
-  async function persistNow() { clearTimeout(prefTimer); await prefFlight; await call('save_preferences', { preferences: JSON.parse(JSON.stringify({ ...preferences.value, tabs: documents.value.map(d => ({ workspaceId: d.workspaceId, path: d.path, view: d.view, pinned:d.pinned, absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined })), activePath: active.value ? `${active.value.workspaceId}|${active.value.path}` : '' })) }) }
+  async function persistNow() { clearTimeout(prefTimer); await prefFlight; await call('save_preferences', { preferences: JSON.parse(JSON.stringify({ ...preferences.value, tabs: documents.value.filter(d=>!d.temporary).map(d => ({ workspaceId: d.workspaceId, path: d.path, view: d.view, pinned:d.pinned, absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined })), activePath: active.value ? `${active.value.workspaceId}|${active.value.path}` : '' })) }) }
   watch(preferences, persist, { deep: true })
   watch(expanded,()=>{preferences.value.treeExpanded={...expanded.value}},{deep:true})
   watch(()=>preferences.value.autoSave,enabled=>{if(!enabled)for(const d of documents.value)cancelTimers(d);else for(const d of documents.value)if(d.revision>d.savedRevision)void save(d)})
@@ -39,31 +39,33 @@ export const useWorkbench = defineStore('workbench', () => {
     const d: Document = { ...disk, revision: 0, savedRevision: 0, status: 'clean', error: '', view: view || preferences.value.defaultView, generation: 0 }
     documents.value.push(d); for (const tag of documentTags(d.text)) if (tag.length<=40 && !preferences.value.tags.includes(tag) && preferences.value.tags.length<100) preferences.value.tags.push(tag); activate(d.id); remember(d); persist(); return documents.value.find(x=>x.id===d.id)!
   }
-  function remember(d:Document) { const previous=preferences.value.recentFiles.find(f=>f.workspaceId===d.workspaceId&&f.path===d.path); preferences.value.recentFiles=[{workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),editedAt:previous?.editedAt,absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined},...preferences.value.recentFiles.filter(f=>f.workspaceId!==d.workspaceId||f.path!==d.path)].slice(0,100) }
-  function favorite(d:Pick<Document,'workspaceId'|'path'>) { const i=preferences.value.favorites.findIndex(f=>f.workspaceId===d.workspaceId&&f.path===d.path);if(i>=0)preferences.value.favorites.splice(i,1);else preferences.value.favorites.push({workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined}) }
-  function pin(d:Document) { d.pinned=!d.pinned;persist() }
+  function remember(d:Document) { if(d.temporary)return; const previous=preferences.value.recentFiles.find(f=>f.workspaceId===d.workspaceId&&f.path===d.path); preferences.value.recentFiles=[{workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),editedAt:previous?.editedAt,absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined},...preferences.value.recentFiles.filter(f=>f.workspaceId!==d.workspaceId||f.path!==d.path)].slice(0,100) }
+  function favorite(d:Pick<Document,'workspaceId'|'path'>) { if(!d.workspaceId)return; const i=preferences.value.favorites.findIndex(f=>f.workspaceId===d.workspaceId&&f.path===d.path);if(i>=0)preferences.value.favorites.splice(i,1);else preferences.value.favorites.push({workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined});toast.success(i>=0?'已取消收藏':'已收藏文档',{description:d.path.split('/').pop()}) }
+  function pin(d:Document) { d.pinned=!d.pinned;persist();toast.success(d.pinned?'标签已固定':'标签已取消固定') }
   function reorder(id:string,before:string) { const from=documents.value.findIndex(d=>d.id===id),to=documents.value.findIndex(d=>d.id===before);if(from<0||to<0||from===to)return;const [d]=documents.value.splice(from,1);documents.value.splice(to,0,d!);persist() }
   async function reopen() { const tab=closedTabs.value.pop();if(tab)await open(tab.workspaceId,tab.path,tab.view) }
   async function reveal(d=active.value) { if(!d)return;const paths=['',...d.path.split('/').slice(0,-1).map((_,i)=>d.path.split('/').slice(0,i+1).join('/'))];for(const path of paths){expanded.value[treeKey(d.workspaceId,path)]=true;await loadDirectory(d.workspaceId,path)} }
   async function navigate(delta:number) { const i=navigationIndex.value+delta;if(i<0||i>=navigation.value.length)return;navigationIndex.value=i;travelling=true;try{const item=navigation.value[i]!;await open(item.workspaceId,item.path);return item.position}finally{travelling=false} }
   function checkpoint(position:number) { const item=navigation.value[navigationIndex.value];if(item)item.position=position }
-  function activate(id: string) { const previous = active.value; if (previous && previous.id !== id && preferences.value.saveOnBlur) void save(previous); activeId.value = id; const d=active.value;if(d){remember(d);if(!travelling && (!previous||previous.id!==id)){navigation.value.splice(navigationIndex.value+1);navigation.value.push({workspaceId:d.workspaceId,path:d.path,position:0});navigationIndex.value=navigation.value.length-1}if(preferences.value.autoReveal)void reveal(d).catch(()=>{})};persist() }
+  function activate(id: string) { const previous = active.value; if (previous && previous.id !== id && preferences.value.saveOnBlur) void save(previous); activeId.value = id; const d=active.value;if(d&&!d.temporary){remember(d);if(!travelling && (!previous||previous.id!==id)){navigation.value.splice(navigationIndex.value+1);navigation.value.push({workspaceId:d.workspaceId,path:d.path,position:0});navigationIndex.value=navigation.value.length-1}if(preferences.value.autoReveal)void reveal(d).catch(()=>{})};persist() }
   function cancelTimers(d: Document) { clearTimeout(timers.get(d.id)); clearTimeout(maxTimers.get(d.id)); timers.delete(d.id); maxTimers.delete(d.id) }
   function beginOperation(d:Document,group:string){operationGroups.set(d.id,group)}
   function change(d: Document, text: string, group = 'typing', capture = true) {
     if (text === d.text) return
     group=operationGroups.get(d.id)||group;operationGroups.delete(d.id);if (capture) { const h=histories.get(d.id)||{past:[],future:[],updated:0,group:''};record(h,d.text,group);histories.set(d.id,h) };d.text = text; d.revision++; if (!['conflict', 'missing'].includes(d.status)) d.status = 'dirty'
+    if(d.temporary)return
     if (preferences.value.autoSave) { clearTimeout(timers.get(d.id)); timers.set(d.id, setTimeout(() => void save(d), Math.max(200,Math.min(30000,preferences.value.autoSaveDelay))))
     if (!maxTimers.has(d.id)) maxTimers.set(d.id, setTimeout(() => void save(d), Math.max(2000,preferences.value.autoSaveDelay*4))) }
     clearTimeout(recoveryTimers.get(d.id)); recoveryTimers.set(d.id, setTimeout(() => void recovery(d), 200))
   }
   function undo(d:Document,redo=false) { const h=histories.get(d.id);if(!h)return;const text=travel(h,d.text,redo);if(text!==undefined){change(d,text,'history',false);d.generation++} }
   function canUndo(d:Document,redo=false) { void d.revision; const h=histories.get(d.id);return !!(redo?h?.future.length:h?.past.length) }
-  async function recovery(d: Document) { if (d.revision <= d.savedRevision) return true; try { await call('write_recovery', { documentId: d.id, text: d.text, hash: d.hash }); return true } catch(e) { toast.error(`草稿保护失败：${message(e)}`); return false } }
+  async function recovery(d: Document) { if(d.temporary)return true; if (d.revision <= d.savedRevision) return true; try { await call('write_recovery', { documentId: d.id, text: d.text, hash: d.hash }); return true } catch(e) { toast.error(`草稿保护失败：${message(e)}`); return false } }
   async function suspend(){for(const d of documents.value){cancelTimers(d);clearTimeout(recoveryTimers.get(d.id))}await Promise.all(flights.values())}
   async function protectDrafts() { return (await Promise.all(documents.value.map(d => { clearTimeout(recoveryTimers.get(d.id)); return recovery(d) }))).every(Boolean) }
   async function save(d: Document): Promise<boolean> {
     cancelTimers(d)
+    if(d.temporary)return false
     if (flights.has(d.id)) return flights.get(d.id)!
     if (d.revision <= d.savedRevision) return true
     if (['conflict', 'missing'].includes(d.status)) return false
@@ -80,9 +82,10 @@ export const useWorkbench = defineStore('workbench', () => {
     })()
     flights.set(d.id, flight); try { return await flight } finally { flights.delete(d.id) }
   }
-  async function flush(workspaceId?: string) { const results = await Promise.all(documents.value.filter(d => !workspaceId || d.workspaceId === workspaceId).map(save)); return results.every(Boolean) }
+  async function flush(workspaceId?: string) { const results = await Promise.all(documents.value.filter(d => !d.temporary && (!workspaceId || d.workspaceId === workspaceId)).map(save)); return results.every(Boolean) }
   async function close(id: string, discard = false) {
     const d = documents.value.find(d => d.id === id); if (!d) return true
+    if(d.temporary){if(!discard)return false;const index=documents.value.findIndex(x=>x.id===id);documents.value.splice(index,1);histories.delete(id);if(activeId.value===id)activeId.value=documents.value[Math.min(index,documents.value.length-1)]?.id||'';persist();return true}
     if (!discard && !await save(d)) return false
     cancelTimers(d); clearTimeout(recoveryTimers.get(id)); if (discard) await call('discard_recovery', { draftId: await draftHash(d) }); await call('close_document', { documentId: id })
     closedTabs.value.push({workspaceId:d.workspaceId,path:d.path,view:d.view});if(closedTabs.value.length>20)closedTabs.value.shift();histories.delete(id);
@@ -92,7 +95,7 @@ export const useWorkbench = defineStore('workbench', () => {
   function setView(view: View) { if (active.value) { active.value.view = view; persist() } }
   async function reload(d: Document) { const disk = await call<DiskDocument>('open_document', { workspaceId: d.workspaceId, path: d.path }); Object.assign(d, disk, { revision: 0, savedRevision: 0, status: 'clean', error: '', generation: d.generation + 1 }); histories.delete(d.id);await call('discard_recovery', { draftId: await draftHash(d) }) }
   async function overwrite(d: Document, expectedHash: string) { const revision = d.revision; const result = await call<{ hash: string }>('save_document', { documentId: d.id, text: d.text, expectedHash, revision, backup: true }); d.hash = result.hash; d.savedRevision = revision; d.status = d.revision === revision ? 'clean' : 'dirty'; d.error = '' }
-  async function saveAs(d: Document) { return call<boolean>('save_document_as', { documentId: d.id, text: d.text }) }
+  async function saveAs(d: Document) { if(d.temporary){const revision=d.revision;const path=await call<string|null>('save_temporary_document',{name:d.path,text:d.text});if(!path)return false;await openLocal([path]);if(d.revision===revision)await close(d.id,true);return true;} const saved=await call<boolean>('save_document_as', { documentId: d.id, text: d.text });if(saved)toast.success('副本已保存');return saved }
   async function restore(draft: Draft) {
     let d: Document
     try { d = await open(draft.workspaceId, draft.path, 'source') }
@@ -157,5 +160,6 @@ export const useWorkbench = defineStore('workbench', () => {
     expanded.value={...expanded.value,...preferences.value.treeExpanded};ready.value = true
   }
   async function openLocal(paths?:string[]) { const result=await call<{workspaces:Workspace[];documents:DiskDocument[]}>('open_local_paths',{paths:paths||null});for(const ws of result.workspaces)if(!workspaces.value.some(w=>w.id===ws.id))workspaces.value.push(ws);for(const disk of result.documents){const existing=documents.value.find(d=>d.id===disk.id);if(!existing)documents.value.push({...disk,revision:0,savedRevision:0,status:'clean',error:'',view:preferences.value.defaultView,generation:0});activate(disk.id)}for(const ws of result.workspaces)await loadDirectory(ws.id);persist() }
-  return { suspend,beginOperation,undo,canUndo,favorite,pin,reorder,reopen,reveal,navigate,checkpoint,closedTabs,navigation,navigationIndex,openLocal,workspaces, documents, activeId, active, tree, expanded, preferences, drafts, ready, initialize, loadDirectory, toggleDirectory, open, activate, change, save, flush, close, setView, reload, overwrite, saveAs, restore, discardDraft, refresh, addWorkspace, removeWorkspace, create, relocate, archive, trash, persist, persistNow, protectDrafts }
+  function createTemporary(){let count=1;while(documents.value.some(d=>d.path===(count===1?'未命名.md':`未命名 ${count}.md`)))count++;const d:Document={id:crypto.randomUUID(),workspaceId:'',path:count===1?'未命名.md':`未命名 ${count}.md`,text:'',hash:'',bom:false,crlf:false,revision:1,savedRevision:0,status:'dirty',error:'',view:'live',generation:0,temporary:true};documents.value.push(d);activate(d.id);return d}
+  return { createTemporary,suspend,beginOperation,undo,canUndo,favorite,pin,reorder,reopen,reveal,navigate,checkpoint,closedTabs,navigation,navigationIndex,openLocal,workspaces, documents, activeId, active, tree, expanded, preferences, drafts, ready, initialize, loadDirectory, toggleDirectory, open, activate, change, save, flush, close, setView, reload, overwrite, saveAs, restore, discardDraft, refresh, addWorkspace, removeWorkspace, create, relocate, archive, trash, persist, persistNow, protectDrafts }
 })

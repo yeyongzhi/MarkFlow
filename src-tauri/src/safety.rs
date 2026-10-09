@@ -89,13 +89,31 @@ pub async fn convert_document_format(state:State<'_,AppState>,document_id:String
 }
 
 #[tauri::command]
-pub async fn check_release(state:State<'_,AppState>)->Result<Value>{
- let endpoint={state.core.lock().unwrap().preferences["updateEndpoint"].as_str().unwrap_or("").to_string()};if endpoint.is_empty(){return Ok(json!({"configured":false,"current":env!("CARGO_PKG_VERSION")}));}
- let url=reqwest::Url::parse(&endpoint).map_err(|_|error("UPDATE","发布地址无效"))?;if url.scheme()!="https"||!url.username().is_empty()||url.password().is_some(){return Err(error("UPDATE","发布地址必须使用 HTTPS"));}
- let client=reqwest::Client::builder().timeout(std::time::Duration::from_secs(15)).redirect(reqwest::redirect::Policy::none()).build().map_err(|e|error("UPDATE",e.to_string()))?;let mut response=client.get(url).send().await.map_err(|e|error("UPDATE",format!("无法连接更新服务：{e}")))?.error_for_status().map_err(|e|error("UPDATE",e.to_string()))?;
+pub async fn check_release()->Result<Value>{
+ let client=reqwest::Client::builder().user_agent(concat!("MarkFlow/",env!("CARGO_PKG_VERSION"))).timeout(std::time::Duration::from_secs(15)).redirect(reqwest::redirect::Policy::none()).build().map_err(|e|error("UPDATE",e.to_string()))?;
+ let mut response=client.get("https://api.github.com/repos/yeyongzhi/MarkFlow/releases/latest").header("Accept","application/vnd.github+json").header("X-GitHub-Api-Version","2022-11-28").send().await.map_err(|e|error("UPDATE",format!("无法连接 GitHub，请检查网络后重试：{e}")))?;
+ if response.status()==reqwest::StatusCode::NOT_FOUND{return Ok(json!({"configured":true,"noRelease":true,"available":false,"current":env!("CARGO_PKG_VERSION")}));}
+ if response.status()==reqwest::StatusCode::FORBIDDEN||response.status()==reqwest::StatusCode::TOO_MANY_REQUESTS{return Err(error("UPDATE","GitHub 暂时拒绝请求或达到访问频率限制，请稍后重试"));}
+ response=response.error_for_status().map_err(|e|error("UPDATE",format!("GitHub 更新检查失败：{e}")))?;
  let mut bytes=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|e|error("UPDATE",e.to_string()))?{if bytes.len()+chunk.len()>1024*1024{return Err(error("UPDATE","发布信息超过 1MiB"));}bytes.extend_from_slice(&chunk)}
- let value:Value=serde_json::from_slice(&bytes).map_err(|_|error("UPDATE","发布信息不是有效 JSON"))?;let version=value["version"].as_str().ok_or_else(||error("UPDATE","发布信息缺少 version"))?;let remote=semver::Version::parse(version.trim_start_matches('v')).map_err(|_|error("UPDATE","版本号无效"))?;let current=semver::Version::parse(env!("CARGO_PKG_VERSION")).unwrap();let download=value["url"].as_str().unwrap_or("");if !download.is_empty()&&reqwest::Url::parse(download).map(|u|u.scheme()!="https").unwrap_or(true){return Err(error("UPDATE","下载链接必须使用 HTTPS"));}
- Ok(json!({"configured":true,"available":remote>current,"current":current.to_string(),"version":remote.to_string(),"notes":value["notes"],"url":download}))
+ let value:Value=serde_json::from_slice(&bytes).map_err(|_|error("UPDATE","发布信息不是有效 JSON"))?;
+ github_release_info(&value,env!("CARGO_PKG_VERSION"))
+}
+
+fn github_release_info(value:&Value,current:&str)->Result<Value>{
+ let version=value["tag_name"].as_str().ok_or_else(||error("UPDATE","发布信息缺少版本标签"))?;
+ let remote=semver::Version::parse(version.strip_prefix('v').unwrap_or(version)).map_err(|_|error("UPDATE","发布版本标签无效"))?;
+ if value["draft"].as_bool()!=Some(false)||value["prerelease"].as_bool()!=Some(false)||!remote.pre.is_empty(){return Err(error("UPDATE","更新源未返回正式发布版本"));}
+ let current=semver::Version::parse(current).map_err(|_|error("UPDATE","当前版本号无效"))?;
+ let url=format!("https://github.com/yeyongzhi/MarkFlow/releases/tag/{version}");
+ Ok(json!({"configured":true,"noRelease":false,"available":remote>current,"current":current.to_string(),"version":remote.to_string(),"notes":value["body"].as_str().unwrap_or(""),"url":url}))
+}
+
+#[cfg(test)]
+mod release_tests{
+ use super::*;
+ #[test]fn github_versions_are_compared_semantically(){let mut value=json!({"tag_name":"v0.10.0","draft":false,"prerelease":false,"body":"更新说明"});let info=github_release_info(&value,"0.9.0").unwrap();assert_eq!(info["available"],true);assert_eq!(info["notes"],"更新说明");assert_eq!(info["url"],"https://github.com/yeyongzhi/MarkFlow/releases/tag/v0.10.0");value["tag_name"]=json!("v0.8.0");assert_eq!(github_release_info(&value,"0.9.0").unwrap()["available"],false);}
+ #[test]fn malformed_and_unpublished_versions_are_rejected(){for value in [json!({"tag_name":"oops","draft":false,"prerelease":false}),json!({"tag_name":"v1.0.0","draft":true,"prerelease":false}),json!({"tag_name":"v1.0.0-beta.1","draft":false,"prerelease":true})]{assert!(github_release_info(&value,"0.1.0").is_err());}}
 }
 
 pub fn protect_deletion(core:&Core,workspace_id:&str,path:&str,target:&Path)->Result<()>{

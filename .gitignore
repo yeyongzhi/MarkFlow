@@ -20,3 +20,4 @@ SHA256SUMS.txt
 
 website/.vitepress/cache/
 website/.vitepress/dist/
+.local/

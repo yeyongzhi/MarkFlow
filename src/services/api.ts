@@ -22,6 +22,8 @@ function demo(command: string, a: Record<string, any>): any {
     case 'tag_candidates': return [...files].map(([path,text])=>({workspaceId:'demo',path,text,hash:hash(text)})).concat([...archived.values()].map(e=>({workspaceId:'demo',path:`.lexly-archive/${e.id}/document.md`,text:e.text,hash:hash(e.text)})))
     case 'apply_tag_changes': { for(const c of a.changes){const entry=c.path.startsWith('.lexly-archive/')?archived.get(c.path.split('/')[1]):undefined;const text=entry?entry.text:files.get(c.path);if(text!==c.expectedHash)throw new Error('文档已变化');}const updated:DiskDocument[]=[];for(const c of a.changes){const entry=archived.get(c.path.split('/')[1]);if(c.path.startsWith('.lexly-archive/')&&entry)entry.text=c.text;else files.set(c.path,c.text);for(const d of docs.values())if(d.path===c.path){d.text=c.text;d.hash=hash(c.text);updated.push({...d})}}return updated }
     case 'open_in_system_directory': throw { message: '请在桌面版中打开真实系统目录。' }
+    case 'knowledge_index': return { documents: [...files].map(([path, text]) => ({ workspaceId: workspace.id, path, text, hash: hash(text), modifiedAt: 0 })), truncated: false, errors: [] }
+    case 'check_release': return { preview: true, configured: true, available: false }
     case 'data_directory': return '浏览器预览 · 设置保存在 localStorage'
     case 'open_data_directory': throw { message: '请在桌面版中打开数据目录。' }
     case 'search_workspace': {

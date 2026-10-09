@@ -378,6 +378,15 @@ async fn save_document_as(app: tauri::AppHandle, state: State<'_, AppState>, doc
     files::atomic_write(&target, &files::encode(&text, doc.bom, doc.crlf))?; Ok(true)
 }
 
+#[tauri::command]
+async fn save_temporary_document(app: tauri::AppHandle, name: String, text: String) -> Result<Option<String>> {
+    let Some(target) = app.dialog().file().set_title("保存 Markdown 文档").set_file_name(name).add_filter("Markdown", &["md"]).blocking_save_file() else { return Ok(None); };
+    let mut target = target.into_path().map_err(|_| error("PATH", "不支持此位置"))?;
+    if target.extension().is_none() { target.set_extension("md"); }
+    files::atomic_write(&target, text.as_bytes())?;
+    Ok(Some(target.to_string_lossy().into_owned()))
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SearchHit { workspace_id: String, path: String, line: usize, snippet: String }
@@ -458,6 +467,8 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
                 let state = window.state::<AppState>(); let core = state.core.lock().unwrap();
@@ -503,7 +514,7 @@ pub fn run() {
             if std::env::var_os("LEXLY_DEV_HEADLESS").is_some() { if let Some(window) = app.get_webview_window("main") { window.hide()?; } }
             Ok(())
         })
-        .invoke_handler({let handler:Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>)->bool+Send+Sync>=Box::new(tauri::generate_handler![knowledge_index,privacy_status,privacy_lock,privacy_unlock,privacy_password,save_window_geometry,valid_file_references,check_release,convert_document_format,list_operation_backups,restore_operation_backup,read_version,list_versions,snapshot_document,read_disk_document,choose_backup_directory,backup_workspace,list_workspace_backups,open_backup_directory,reconnect_workspace,open_local_paths,bootstrap, data_directory, open_data_directory, select_workspace, remove_workspace, list_directory, open_in_system_directory, document_metadata, open_document, check_document, close_document, save_document, write_recovery, discard_recovery, open_recovery, save_preferences, create_entry, relocate_entry, trash_entry, import_image, open_image_directory, resolve_image, resolve_markdown_link, save_document_as, search_workspace, export_file, archive_document, list_archives, restore_archive, delete_archive, tag_candidates, apply_tag_changes]); move |invoke:tauri::ipc::Invoke<tauri::Wry>| {let locked=invoke.message.webview().state::<AppState>().privacy.locked.load(std::sync::atomic::Ordering::SeqCst);if locked&&!matches!(invoke.message.command(),"privacy_status"|"privacy_unlock"|"save_window_geometry"){invoke.resolver.reject(json!({"code":"LOCKED","message":"请先解锁应用"}));return true}handler(invoke)}})
+        .invoke_handler({let handler:Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>)->bool+Send+Sync>=Box::new(tauri::generate_handler![knowledge_index,privacy_status,privacy_lock,privacy_unlock,privacy_password,save_window_geometry,valid_file_references,check_release,convert_document_format,list_operation_backups,restore_operation_backup,read_version,list_versions,snapshot_document,read_disk_document,choose_backup_directory,backup_workspace,list_workspace_backups,open_backup_directory,reconnect_workspace,open_local_paths,bootstrap, data_directory, open_data_directory, select_workspace, remove_workspace, list_directory, open_in_system_directory, document_metadata, open_document, check_document, close_document, save_document, write_recovery, discard_recovery, open_recovery, save_preferences, create_entry, relocate_entry, trash_entry, import_image, open_image_directory, resolve_image, resolve_markdown_link, save_temporary_document, save_document_as, search_workspace, export_file, archive_document, list_archives, restore_archive, delete_archive, tag_candidates, apply_tag_changes]); move |invoke:tauri::ipc::Invoke<tauri::Wry>| {let locked=invoke.message.webview().state::<AppState>().privacy.locked.load(std::sync::atomic::Ordering::SeqCst);if locked&&!matches!(invoke.message.command(),"privacy_status"|"privacy_unlock"|"save_window_geometry"){invoke.resolver.reject(json!({"code":"LOCKED","message":"请先解锁应用"}));return true}handler(invoke)}})
         .run(tauri::generate_context!())
         .expect("Lexly failed to start");
 }

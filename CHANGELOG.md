@@ -13,3 +13,7 @@
 - 增加版本一致性检查和 GitHub Release 草稿构建流程。
 
 - 产品名称调整为 MarkFlow，新增 VitePress 使用站点与 GitHub Pages 工作流。
+
+- 更新检查内置官方 GitHub Releases，移除用户填写发布地址的设置。
+
+- 接入 Tauri updater 与签名发布产物；统一标题下拉菜单和标签选中态；补齐收藏、固定与手动保存等操作提示。

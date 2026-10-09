@@ -19,7 +19,8 @@
     "version:set": "node scripts/version.mjs set",
     "docs:dev": "vitepress dev website --host 127.0.0.1",
     "docs:build": "vitepress build website",
-    "docs:preview": "vitepress preview website --host 127.0.0.1"
+    "docs:preview": "vitepress preview website --host 127.0.0.1",
+    "release:build": "node scripts/build-release.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -41,6 +42,8 @@
     "@lucide/vue": "^1.49.0",
     "@tauri-apps/api": "^2.12.0",
     "@tauri-apps/plugin-opener": "^2.7.0",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.1",
     "@vueuse/core": "^15.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

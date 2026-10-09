@@ -31,6 +31,8 @@ pulldown-cmark = "0.13"
 reqwest = { version = "0.13", features = ["json"] }
 semver = "1"
 argon2 = { version = "0.6", features = ["getrandom"] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [profile.release]
 strip = true
