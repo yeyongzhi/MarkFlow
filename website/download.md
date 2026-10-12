@@ -1,16 +1,28 @@
+<script setup>
+import { version } from '../package.json'
+const installerUrl = `https://github.com/yeyongzhi/MarkFlow/releases/download/v${version}/MarkFlow_${version}_x64-setup.exe`
+</script>
+
 # 下载与安装
+
+<a :href="installerUrl" class="download-installer">下载 Windows x64 测试版 · {{ version }}</a>
+
+<style>
+.download-installer { display: inline-block; padding: 12px 20px; border-radius: 8px; background: var(--vp-c-brand-1); color: white !important; font-weight: 600; text-decoration: none !important; }
+.download-installer:hover { background: var(--vp-c-brand-2); }
+</style>
+
+测试版用于体验与反馈。安装包和更新签名均托管在 GitHub Releases。
 
 安装包通过 GitHub Releases 分发。请从发布页选择适合系统的附件，核对版本说明。
 
 [前往 MarkFlow 发布页 →](https://github.com/yeyongzhi/MarkFlow/releases)
 
-::: info 首次发布
-当前项目正在准备首版发布。若发布页尚无安装包，请等待维护者发布 Release；仓库源码和 Actions 构建产物不等同于已验收的正式版本。
-:::
+
 
 ## Windows
 
-首版发布流程面向 **Windows x64**，安装文件名类似 `MarkFlow_0.1.0_x64-setup.exe`。
+首版发布流程面向 **Windows x64**，安装文件名类似 `MarkFlow_0.1.0-beta.1_x64-setup.exe`。
 
 1. 在发布页下载 `*-setup.exe` 和可用的 `SHA256SUMS.txt`。
 2. 运行安装向导，选择独立目录，例如 `D:\Program\MarkFlow`。
@@ -23,7 +35,7 @@
 可用 PowerShell 校验下载文件，与发布页提供的 SHA-256 比较：
 
 ```powershell
-Get-FileHash -LiteralPath '.\MarkFlow_0.1.0_x64-setup.exe' -Algorithm SHA256
+Get-FileHash -LiteralPath '.\MarkFlow_0.1.0-beta.1_x64-setup.exe' -Algorithm SHA256
 ```
 
 ## macOS
@@ -38,4 +50,4 @@ Get-FileHash -LiteralPath '.\MarkFlow_0.1.0_x64-setup.exe' -Algorithm SHA256
 
 应用内检查更新已内置官方 GitHub Releases，无需填写地址；发现新版后可在应用内下载并安装经过签名验证的更新。详见[数据与备份](./guide/storage)。
 
-更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。
+测试版接收后续 beta 与更高版本的正式更新；正式版只接收正式更新。应用根据发布标签读取同一 Release 的 `latest.json`，下载后验证签名，并在安装前保存文档和会话。

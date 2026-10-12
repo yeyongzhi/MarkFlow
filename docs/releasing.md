@@ -1,6 +1,6 @@
 # 版本与发布指南
 
-更新日期：2026-10-08。当前版本 0.1.0 尚未公开发布。当前目录已初始化 Git，origin 绑定 https://github.com/yeyongzhi/MarkFlow.git；本次只准备本地文件，没有创建 GitHub 仓库或发布 Release。
+更新日期：2026-10-12。当前版本 0.1.0-beta.1。当前目录已初始化 Git，origin 绑定 https://github.com/yeyongzhi/MarkFlow.git；本次只准备本地文件，没有创建 GitHub 仓库或发布 Release。
 
 ## 安装和数据位置
 
@@ -8,7 +8,7 @@ Windows 使用 NSIS 当前用户安装包，可在向导选择 `D:\Program\MarkF
 
 | 内容 | 正式版 Windows 默认位置 |
 | --- | --- |
-| 程序 | `<安装目录>\lexly.exe` |
+| 程序 | `<安装目录>\markflow.exe` |
 | 设置 / 最近 / 收藏 / 标签会话 | `<安装目录>\data\preferences.json` |
 | 工作区登记 / 窗口状态 / 锁屏密码哈希 | `data\workspaces.json` / `window.json` / `privacy.json` |
 | 草稿 / 历史 / 操作备份 / 工作区备份 | `data\recovery` / `history` / `operations` / `workspace-backups` 等 |
@@ -37,7 +37,7 @@ pnpm version:check
 
 ## GitHub 首次准备
 
-1. 确定公开仓库地址和许可证。暂未选择许可证，因此当前没有 LICENSE；公开可见不等于授予他人使用、修改或分发的开源许可。
+1. 确定公开仓库地址和许可证。暂未选择许可证，因此当前没有 LICENSE；公开可见不等于授予他人使用、修改或分发的开源许可。测试发布暂不授予开源许可，许可证选择留待维护者决定。
 2. 初始化 Git，检查所有待提交文件。提交源码、两个依赖锁文件、工作流和文档；排除 `node_modules`、`.cache`、`dist`、`src-tauri/target`、`artifacts`、运行数据和密钥。
 3. 检查文档中的本机路径、姓名、截图以及历史提交中的私人信息。`.gitignore` 只能防止新文件被加入，不能清理已有历史。
 4. 创建 public 仓库并推送 main。在 GitHub 检查 Actions 能够运行，Release 工作流有写入 contents 的权限；无需存储个人 token。
@@ -60,9 +60,9 @@ git push origin v0.1.0
 
 ## 应用内更新
 
-当前已内置 https://api.github.com/repos/yeyongzhi/MarkFlow/releases/latest。用户无需填写地址；点击检查时联网，无公开正式版本时显示提示。公开 Release 的 tag 必须为 SemVer（例如 v0.2.0）；不采纳草稿或预发布。
+应用内置官方 GitHub Releases。正式版读取最新正式发布；beta 读取最近 100 个公开 Release，按 SemVer 选择同通道或正式版中的最高版本，不采纳草稿、alpha 或 rc。更新清单取自选中版本的 Release，避免 beta 被 latest 正式通道漏掉。
 
-发现新版本后，可在应用内下载并安装。已接入 Tauri updater 和更新签名。公钥随应用打包，私钥仅存于本地 .local/updater.key（已忽略）。首次远端发布前，维护者需将该私钥内容配置为 TAURI_SIGNING_PRIVATE_KEY Secret；当前私钥无密码，TAURI_SIGNING_PRIVATE_KEY_PASSWORD 留空。更新签名与 Windows Authenticode 代码签名是两套机制。
+发现新版本后，可在应用内下载并安装。已接入 Tauri updater 和更新签名。公钥随应用打包，私钥仅存于本地 .local/updater.key（已忽略）。首次远端发布前，维护者需将该私钥内容配置为 TAURI_SIGNING_PRIVATE_KEY Secret；当前私钥由首版发布准备重新生成，之前没有公开 Release；当前私钥无密码，TAURI_SIGNING_PRIVATE_KEY_PASSWORD 留空。更新签名与 Windows Authenticode 代码签名是两套机制。
 
 参考：[Tauri Windows 安装器](https://v2.tauri.app/distribute/windows-installer/)、[Tauri 构建与 Release Action](https://github.com/tauri-apps/tauri-action)。
 

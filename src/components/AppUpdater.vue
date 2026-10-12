@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
-import { check, type Update } from '@tauri-apps/plugin-updater'
+import { Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { installProtectedUpdate } from '@/services/update-install'
 import { toast } from 'vue-sonner'
@@ -18,9 +18,10 @@ async function checkUpdate() {
   try {
     await update?.close(); update = null
     const release = await call<{ noRelease?: boolean; available: boolean }>('check_release')
-    if (release.noRelease) { toast.info('尚无公开的正式版本'); return }
+    if (release.noRelease) { toast.info('当前更新通道尚无公开版本'); return }
     if (release.available) {
-      update = await check({ timeout: 20000 })
+      const metadata = await call<ConstructorParameters<typeof Update>[0] | null>('check_signed_update')
+      update = metadata ? new Update(metadata) : null
       if (!update) throw new Error('发现新版本，但该版本的签名更新清单尚不可用')
     }
     version.value = update?.version || ''; notes.value = update?.body || ''; checked.value = true

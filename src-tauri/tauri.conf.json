@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "MarkFlow",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "identifier": "com.lexly.editor",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -55,7 +55,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwRThGODUwNUU2RDVCNzUKUldSMVcyMWVVUGpvUU1nZlJrNlpGY3dqZVljb2RKU1NOMlowK2RGL1FmUGFhNE9tSDdWdE11UEYK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY0NTNFMUYzRDA1OTU4NDAKUldSQVdGblE4K0ZUOUN1cE9KQUtpTmZiZ1FhSjhCTWZkSFNFWWhXenVZUllMdVJBaHpMZmJ6R2QK",
       "endpoints": [
         "https://github.com/yeyongzhi/MarkFlow/releases/latest/download/latest.json"
       ],

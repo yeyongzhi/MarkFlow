@@ -2,7 +2,7 @@
 
 ## 本地运行
 
-需要 Node.js 24、pnpm 12、Rust stable，Windows 还需要 MSVC 构建工具、Windows SDK 和 WebView2。
+需要 Node.js 24、pnpm 12、Rust 1.90 或以上，Windows 还需要 MSVC 构建工具、Windows SDK 和 WebView2。
 
 ```sh
 pnpm install --frozen-lockfile
@@ -23,7 +23,7 @@ pnpm docs:preview
 
 ```sh
 pnpm version:check
-pnpm version:set 0.2.0
+pnpm version:set 0.1.0-beta.1
 pnpm typecheck
 pnpm test
 pnpm build
