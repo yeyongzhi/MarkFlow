@@ -15,6 +15,9 @@ hero:
       text: 开始使用
       link: /guide/getting-started
     - theme: alt
+      text: 更新日志
+      link: /changelog
+    - theme: alt
       text: 查看 GitHub
       link: https://github.com/yeyongzhi/MarkFlow
 features:

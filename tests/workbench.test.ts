@@ -16,14 +16,28 @@ beforeEach(() => { setActivePinia(createPinia()); vi.useFakeTimers(); mocks.call
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers() })
 
 describe('document save coordination', () => {
+  it('cleans invalid references at startup and persists the valid records', async () => {
+    const store = useWorkbench()
+    const valid = { workspaceId: 'workspace', path: 'kept.md', openedAt: 1 }
+    const stale = { workspaceId: 'removed', path: 'stale.md', openedAt: 2 }
+    mocks.call.mockImplementation(async (command: string) => {
+      if (command === 'bootstrap') return { workspaces: [], drafts: [], preferences: { recentFiles: [stale, valid], favorites: [stale] }, pendingOperations: 0 }
+      if (command === 'valid_file_references') return { recentFiles: [valid], favorites: [] }
+    })
+    await store.initialize()
+    expect(store.preferences.recentFiles).toEqual([valid])
+    expect(store.preferences.favorites).toEqual([])
+    await vi.advanceTimersByTimeAsync(250)
+    expect(mocks.call).toHaveBeenCalledWith('save_preferences', expect.objectContaining({ preferences: expect.objectContaining({ recentFiles: [valid], favorites: [] }) }))
+  })
   it('announces adding and removing a favorite through the shared action', () => {
     const store = useWorkbench(), doc = seed()
     store.favorite(doc)
     expect(store.preferences.favorites).toHaveLength(1)
-    expect(mocks.toast).toHaveBeenLastCalledWith('已收藏文档', { description: 'a.md' })
+    expect(mocks.toast).toHaveBeenLastCalledWith('已收藏文档')
     store.favorite(doc)
     expect(store.preferences.favorites).toHaveLength(0)
-    expect(mocks.toast).toHaveBeenLastCalledWith('已取消收藏', { description: 'a.md' })
+    expect(mocks.toast).toHaveBeenLastCalledWith('已取消收藏')
   })
   it('keeps opened documents and activates an existing tab without reopening it', async () => {
     const store = useWorkbench()

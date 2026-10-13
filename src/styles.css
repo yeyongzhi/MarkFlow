@@ -221,7 +221,9 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); o
 .vditor-reset ol, .markdown-body ol { list-style: decimal; padding-left: 1.6em; }
 .vditor-reset li, .markdown-body li { line-height: 1.9; margin: 3px 0; }
 .markdown-body ul.contains-task-list { padding-left: .3em; list-style: none; }
-.markdown-body input[type=checkbox] { margin-right: 8px; accent-color: var(--primary); }
+.markdown-body input[type=checkbox] { appearance: none; display: inline-grid; place-content: center; width: 14px; height: 14px; margin-right: 8px; vertical-align: -1px; border: 1.5px solid var(--primary); border-radius: 3px; background: var(--background); opacity: 1; }
+.markdown-body input[type=checkbox]:checked { background: var(--primary); }
+.markdown-body input[type=checkbox]:checked::after { content: ''; width: 4px; height: 7px; border: solid var(--primary-foreground); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
 .vditor-reset a, .markdown-body a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
 .vditor-reset img, .markdown-body img { max-width: 100%; height: auto; border-radius: 6px; cursor: pointer; }
 .source-preview-layout { display: flex; height: 100%; }

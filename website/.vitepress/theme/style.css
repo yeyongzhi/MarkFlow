@@ -16,3 +16,35 @@
 }
 .VPHomeHero .image-src { max-width: 200px; max-height: 200px; }
 .VPFeature { border-radius: 18px; }
+
+/* Release notes use compact metadata and a type legend. */
+.changelog-page .changelog-date {
+  display: inline-flex;
+  align-items: center;
+  margin: 12px 0 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.changelog-page .vp-doc table {
+  display: table;
+  width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
+}
+.changelog-page .vp-doc th,
+.changelog-page .vp-doc td {
+  padding: 5px 12px;
+  border: 1px solid var(--vp-c-divider);
+  background: transparent;
+  line-height: 1.5;
+}
+.changelog-page .vp-doc th:first-child,
+.changelog-page .vp-doc td:first-child { width: 64px; text-align: center; }
+
+.changelog-page .vp-doc h2 + p { margin-top: 8px; }
+.changelog-page .changelog-date { margin-top: 0; }

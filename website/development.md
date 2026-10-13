@@ -23,14 +23,14 @@ pnpm docs:preview
 
 ```sh
 pnpm version:check
-pnpm version:set 0.1.0-beta.1
+pnpm version:set 0.1.0-beta.2
 pnpm typecheck
 pnpm test
 pnpm build
 pnpm docs:build
 ```
 
-版本同时维护前端、Tauri、Rust 和 Cargo 锁文件。更新根目录 CHANGELOG.md 后提交，再创建匹配的 `v*` 标签。GitHub Actions 构建 Windows Release 草稿；安装验收后由维护者公开发布。
+版本同时维护前端、Tauri、Rust 和 Cargo 锁文件。更新根目录 CHANGELOG.md 后提交，再创建匹配的 `v*` 标签。GitHub Actions 构建 Windows Release 草稿；安装验收后由维护者公开发布。站点的更新日志直接引用根目录 CHANGELOG.md，无需另写一份；发布安装包后再更新下载页的版本入口。
 
 ## GitHub Pages
 

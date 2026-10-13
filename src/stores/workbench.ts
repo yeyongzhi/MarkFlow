@@ -40,7 +40,7 @@ export const useWorkbench = defineStore('workbench', () => {
     documents.value.push(d); for (const tag of documentTags(d.text)) if (tag.length<=40 && !preferences.value.tags.includes(tag) && preferences.value.tags.length<100) preferences.value.tags.push(tag); activate(d.id); remember(d); persist(); return documents.value.find(x=>x.id===d.id)!
   }
   function remember(d:Document) { if(d.temporary)return; const previous=preferences.value.recentFiles.find(f=>f.workspaceId===d.workspaceId&&f.path===d.path); preferences.value.recentFiles=[{workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),editedAt:previous?.editedAt,absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined},...preferences.value.recentFiles.filter(f=>f.workspaceId!==d.workspaceId||f.path!==d.path)].slice(0,100) }
-  function favorite(d:Pick<Document,'workspaceId'|'path'>) { if(!d.workspaceId)return; const i=preferences.value.favorites.findIndex(f=>f.workspaceId===d.workspaceId&&f.path===d.path);if(i>=0)preferences.value.favorites.splice(i,1);else preferences.value.favorites.push({workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined});toast.success(i>=0?'已取消收藏':'已收藏文档',{description:d.path.split('/').pop()}) }
+  function favorite(d:Pick<Document,'workspaceId'|'path'>) { if(!d.workspaceId)return; const i=preferences.value.favorites.findIndex(f=>f.workspaceId===d.workspaceId&&f.path===d.path);if(i>=0)preferences.value.favorites.splice(i,1);else preferences.value.favorites.push({workspaceId:d.workspaceId,path:d.path,openedAt:Date.now(),absolutePath:d.workspaceId.startsWith('file-')?workspaces.value.find(w=>w.id===d.workspaceId)?.path+'/'+d.path:undefined});toast.success(i>=0?'已取消收藏':'已收藏文档') }
   function pin(d:Document) { d.pinned=!d.pinned;persist();toast.success(d.pinned?'标签已固定':'标签已取消固定') }
   function reorder(id:string,before:string) { const from=documents.value.findIndex(d=>d.id===id),to=documents.value.findIndex(d=>d.id===before);if(from<0||to<0||from===to)return;const [d]=documents.value.splice(from,1);documents.value.splice(to,0,d!);persist() }
   async function reopen() { const tab=closedTabs.value.pop();if(tab)await open(tab.workspaceId,tab.path,tab.view) }
@@ -157,7 +157,15 @@ export const useWorkbench = defineStore('workbench', () => {
     if (data.preferences.activePath) { const d = documents.value.find(d => `${d.workspaceId}|${d.path}` === data.preferences.activePath); if (d) activeId.value = d.id }
     if (!desktop && !documents.value.length) await open('demo', '欢迎.md')
     if (data.pendingOperations) toast.error('检测到未完成的文件操作，请检查应用数据目录 operations 中的恢复材料。', { duration: Infinity })
+    if (desktop) {
+      try {
+        const valid = await call<Pick<Preferences, 'recentFiles' | 'favorites'>>('valid_file_references')
+        preferences.value.recentFiles = valid.recentFiles
+        preferences.value.favorites = valid.favorites
+      } catch (e) { toast.error(`文档记录检查失败：${message(e)}`) }
+    }
     expanded.value={...expanded.value,...preferences.value.treeExpanded};ready.value = true
+    persist()
   }
   async function openLocal(paths?:string[]) { const result=await call<{workspaces:Workspace[];documents:DiskDocument[]}>('open_local_paths',{paths:paths||null});for(const ws of result.workspaces)if(!workspaces.value.some(w=>w.id===ws.id))workspaces.value.push(ws);for(const disk of result.documents){const existing=documents.value.find(d=>d.id===disk.id);if(!existing)documents.value.push({...disk,revision:0,savedRevision:0,status:'clean',error:'',view:preferences.value.defaultView,generation:0});activate(disk.id)}for(const ws of result.workspaces)await loadDirectory(ws.id);persist() }
   function createTemporary(){let count=1;while(documents.value.some(d=>d.path===(count===1?'未命名.md':`未命名 ${count}.md`)))count++;const d:Document={id:crypto.randomUUID(),workspaceId:'',path:count===1?'未命名.md':`未命名 ${count}.md`,text:'',hash:'',bom:false,crlf:false,revision:1,savedRevision:0,status:'dirty',error:'',view:'live',generation:0,temporary:true};documents.value.push(d);activate(d.id);return d}

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useWorkbench } from '@/stores/workbench'
-import { message } from '@/services/api'
+import { code, message } from '@/services/api'
 import { cn } from '@/lib/utils'
 import type { FileRef } from '@/types'
 
@@ -17,7 +17,12 @@ function context(file: FileRef) { return `${store.workspaces.find(w => w.id === 
 async function open(file: FileRef) {
   opening.value = key(file); error.value = ''
   try { if (file.absolutePath) await store.openLocal([file.absolutePath]); else await store.open(file.workspaceId, file.path) }
-  catch (e) { error.value = message(e) }
+  catch (e) {
+    if (['MISSING', 'SCOPE'].includes(code(e))) {
+      for (const list of ['recentFiles', 'favorites'] as const) store.preferences[list] = store.preferences[list].filter(item => key(item) !== key(file))
+      error.value = '已清除失效文档记录'
+    } else error.value = message(e)
+  }
   finally { opening.value = '' }
 }
 
@@ -35,7 +40,7 @@ async function open(file: FileRef) {
       </div>
       <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon-xs" class="shrink-0" aria-label="在文件树中定位当前文档" :disabled="!store.active || store.active.workspaceId.startsWith('file-')" @click="emit('reveal')"><LocateFixedIcon /></Button></TooltipTrigger><TooltipContent side="right">在文件树中找到当前文档</TooltipContent></Tooltip>
     </div>
-    <p v-if="error" role="alert" class="px-2 pb-2 text-xs text-destructive">{{ error }}。可通过文件菜单中的最近文档清理失效记录。</p>
+    <p v-if="error" role="alert" class="px-2 pb-2 text-xs text-destructive">{{ error }}</p>
     <TabsContent :value="category" class="max-h-[min(30vh,16rem)] min-h-0 overflow-y-auto overscroll-contain" :aria-label="category==='recent'?'最近文档列表':'收藏文档列表'">
       <div v-for="file in rows" :key="key(file)" class="group flex min-w-0 items-center gap-1 rounded-lg hover:bg-muted">
         <Button :variant="store.active?.workspaceId===file.workspaceId && store.active.path===file.path?'secondary':'ghost'" :class="cn('h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-2 text-left')" :aria-label="`打开${category==='recent'?'最近':'收藏'}文档 ${file.path}`" :title="file.absolutePath || context(file)" :disabled="opening===key(file)" @click="open(file)">

@@ -3,9 +3,9 @@ name: Build and deploy documentation
 on:
   push:
     branches: [main, dev]
-    paths: ['website/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'scripts/editor-assets.mjs', '.github/workflows/pages.yml']
+    paths: ['website/**', 'CHANGELOG.md', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'scripts/editor-assets.mjs', '.github/workflows/pages.yml']
   pull_request:
-    paths: ['website/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'scripts/editor-assets.mjs', '.github/workflows/pages.yml']
+    paths: ['website/**', 'CHANGELOG.md', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'scripts/editor-assets.mjs', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:

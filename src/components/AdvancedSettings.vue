@@ -32,9 +32,5 @@ async function chooseBackup(){try{const path=await call<string|null>('choose_bac
 <SettingsRow label="Markdown 语法补全" description="补齐成对括号、引号、代码围栏；列表自动续写。"><Switch v-model="p.syntaxAssist" aria-label="Markdown 语法补全"/></SettingsRow>
 <SettingsRow label="斜杠命令" description="在空行输入 /，选择标题、表格、图片、代码块等。"><Switch v-model="p.slashCommands" aria-label="斜杠命令"/></SettingsRow>
 <SettingsRow label="自动定位当前文档" description="打开文档时展开文件树并定位。"><Switch v-model="p.autoReveal" aria-label="自动定位当前文档"/></SettingsRow>
-</template><template v-if="section==='templates'"><div class="rounded-lg border bg-muted/20 p-4 text-sm leading-7"><p>占位符会在新建文档时自动替换：</p><p><code v-pre>{{title}}</code> → 新文档名称（不含 .md）；<code v-pre>{{date}}</code> → 创建文档当天的日期。</p><p>例如模板填写下面的内容：</p><pre class="mt-2 whitespace-pre-wrap rounded-md bg-muted p-3 text-xs" v-pre># {{title}}
-
-日期：{{date}}
-
-## 正文</pre><p class="mt-2">保存模板后，通过“文件 → 新建文档”或 Ctrl+N，在“文档模板”中选择它。双击标签栏创建的空白临时文档不会套用模板。</p></div><TemplateManager/>
+</template><template v-if="section==='templates'"><TemplateManager/>
 </template><template v-if="section==='desktop'"><SettingsRow label="关闭到系统托盘" description="关闭按钮隐藏窗口；托盘菜单可显示窗口或保存后退出。"><Switch v-model="p.closeToTray" aria-label="关闭到系统托盘"/></SettingsRow></template><template v-if="section==='about'"><AppUpdater/></template></template>

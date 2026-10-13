@@ -1,22 +1,62 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { toast } from 'vue-sonner'
-import { PlusIcon, Trash2Icon, CheckIcon } from '@lucide/vue'
+import { PlusIcon, Trash2Icon, PencilIcon, CopyIcon } from '@lucide/vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Field, FieldLabel, FieldDescription } from '@/components/ui/field'
+import { Item, ItemGroup, ItemMedia, ItemContent, ItemTitle, ItemActions } from '@/components/ui/item'
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog'
+import TagEditorDialog from './TagEditorDialog.vue'
 import { useWorkbench } from '@/stores/workbench'
 import { tagColor } from '@/services/tag-colors'
 import { changeTag } from '@/services/tags'
 import { message } from '@/services/api'
-const emit=defineEmits<{busy:[value:boolean]}>(),store=useWorkbench(),name=ref(''),drafts=ref<Record<string,string>>({}),busy=ref(false),deleting=ref<string>()
-function validate(value:string){const text=value.trim();if(!text || text.length>40 || /[\r\n\x00-\x1f]/.test(text))throw new Error('标签名称应为 1–40 个字符。');if(store.preferences.tags.includes(text))throw new Error('标签名称已存在。');return text}
-function add(){try{if(store.preferences.tags.length>=100)throw new Error('最多添加 100 个标签。');store.preferences.tags.push(validate(name.value));name.value='';toast.success('标签已添加')}catch(e){toast.error(message(e))}}
-async function update(old:string,remove=false){if(busy.value)return;try{const next=remove?undefined:validate(drafts.value[old]||old);busy.value=true;emit('busy',true);const count=await changeTag(old,next);deleting.value=undefined;toast.success(remove?'标签已删除':'标签已更新',{description:`同步更新 ${count} 份文档（含归档）。`})}catch(e){toast.error(message(e))}finally{busy.value=false;emit('busy',false)}}
+const emit = defineEmits<{ busy: [value: boolean] }>()
+const store = useWorkbench(), query = shallowRef(''), busy = shallowRef(false), editing = shallowRef(false), original = shallowRef<string>(), error = shallowRef(''), deleting = shallowRef<string>()
+const rows = computed(() => store.preferences.tags.filter(tag => tag.toLowerCase().includes(query.value.trim().toLowerCase())))
+function edit(tag?: string) { original.value = tag; error.value = ''; editing.value = true }
+function setBusy(value: boolean) { busy.value = value; emit('busy', value) }
+async function save(name: string, color: string) {
+  if (busy.value) return
+  error.value = ''
+  try {
+    const next = name.trim(), old = original.value
+    if (!next || next.length > 40 || /[\r\n\x00-\x1f]/.test(next)) throw new Error('标签名称应为 1–40 个字符。')
+    if (next !== old && store.preferences.tags.includes(next)) throw new Error('标签名称已存在。')
+    if (!old && store.preferences.tags.length >= 100) throw new Error('最多添加 100 个标签。')
+    setBusy(true)
+    if (old && next !== old) await changeTag(old, next)
+    else if (!old) store.preferences.tags.push(next)
+    store.preferences.tagColors[next] = color
+    editing.value = false
+    toast.success(old ? '标签已更新' : '标签已添加')
+  } catch (e) { error.value = message(e) }
+  finally { setBusy(false) }
+}
+async function remove() {
+  if (!deleting.value || busy.value) return
+  setBusy(true)
+  try { await changeTag(deleting.value); deleting.value = undefined; toast.success('标签已删除') }
+  catch (e) { toast.error(message(e)) }
+  finally { setBusy(false) }
+}
+async function copy(tag: string) {
+  try { await navigator.clipboard.writeText(tag); toast.success('标签已复制') }
+  catch (e) { toast.error(message(e)) }
+}
 </script>
-<template><Field><FieldLabel>标签管理</FieldLabel><FieldDescription>标签写入文档 front-matter。重命名和删除会同步更新已添加工作区中的文档（含归档），原文备份保留在应用数据目录。</FieldDescription>
-  <div class="tag-settings-row"><Input v-model="name" aria-label="新标签名称" placeholder="输入标签名称" :disabled="busy" @keydown.enter.prevent="add"/><Button variant="outline" :disabled="busy" @click="add"><PlusIcon data-icon="inline-start"/>添加</Button></div>
-  <div class="tag-settings-list"><div v-for="tag in store.preferences.tags" :key="tag" class="tag-settings-row"><input type="color" :value="tagColor(store.preferences.tagColors,tag)" :aria-label="`标签 ${tag} 颜色`" class="size-8 shrink-0 cursor-pointer rounded" :disabled="busy" @input="store.preferences.tagColors[tag]=($event.target as HTMLInputElement).value"/><Input :model-value="drafts[tag] ?? tag" :aria-label="`标签 ${tag} 名称`" :disabled="busy" @update:model-value="v=>drafts[tag]=String(v)" @keydown.enter.prevent="update(tag)"/><Button variant="outline" size="icon-sm" :aria-label="`保存标签 ${tag}`" title="保存标签名称" :disabled="busy || !drafts[tag] || drafts[tag]===tag" @click="update(tag)"><CheckIcon/></Button><Button variant="ghost" size="icon-sm" :aria-label="`删除标签 ${tag}`" title="删除标签" :disabled="busy" @click="deleting=tag"><Trash2Icon/></Button></div></div><p v-if="!store.preferences.tags.length" class="text-muted-foreground text-sm">还没有标签。</p>
-  <AlertDialog :open="!!deleting" @update:open="v=>{if(!v&&!busy)deleting=undefined}"><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>删除标签“{{ deleting }}”？</AlertDialogTitle><AlertDialogDescription>将从标签库及所有已添加工作区的文档中移除此标签，含归档文档。正文与其他元数据会保留。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel :disabled="busy">取消</AlertDialogCancel><Button variant="destructive" :disabled="busy" @click="update(deleting!,true)">{{busy?'正在更新…':'删除标签'}}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
-</Field></template>
+<template>
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center gap-2"><Input v-model="query" aria-label="搜索标签" placeholder="搜索标签名称…" class="min-w-0 flex-1"/><Button :disabled="busy" @click="edit()"><PlusIcon/>添加</Button></div>
+    <ItemGroup aria-label="标签列表">
+      <Item v-for="tag in rows" :key="tag" role="listitem" size="sm" variant="outline" class="min-w-0 flex-nowrap">
+        <ItemMedia><span class="size-4 shrink-0 rounded-full" :style="{backgroundColor:tagColor(store.preferences.tagColors,tag)}"/></ItemMedia>
+        <ItemContent class="min-w-0"><ItemTitle class="block truncate" :title="tag">{{tag}}</ItemTitle></ItemContent>
+        <ItemActions class="gap-1"><Button variant="ghost" size="icon-sm" :aria-label="`编辑标签 ${tag}`" :disabled="busy" @click="edit(tag)"><PencilIcon/></Button><Button variant="ghost" size="icon-sm" :aria-label="`复制标签 ${tag}`" :disabled="busy" @click="copy(tag)"><CopyIcon/></Button><Button variant="destructive" size="icon-sm" :aria-label="`删除标签 ${tag}`" :disabled="busy" @click="deleting=tag"><Trash2Icon/></Button></ItemActions>
+      </Item>
+    </ItemGroup>
+    <p v-if="!rows.length" class="py-8 text-center text-sm text-muted-foreground">{{query.trim()?'没有匹配的标签。':'还没有标签。'}}</p>
+    <TagEditorDialog :open="editing" :tag="original" :color="original?tagColor(store.preferences.tagColors,original):store.preferences.accent" :busy="busy" :error="error" @update:open="editing=$event" @save="save"/>
+    <AlertDialog :open="!!deleting" @update:open="v=>{if(!v&&!busy)deleting=undefined}"><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>删除标签“{{deleting}}”？</AlertDialogTitle><AlertDialogDescription>将从标签库及所有已添加工作区的文档中移除此标签，含归档文档。正文与其他元数据会保留。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel :disabled="busy">取消</AlertDialogCancel><Button variant="destructive" :disabled="busy" @click="remove">{{busy?'正在更新…':'删除标签'}}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
+  </div>
+</template>
