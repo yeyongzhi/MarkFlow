@@ -25,20 +25,21 @@ import SettingsRow from '@/components/SettingsRow.vue'
 import SettingsSection from '@/components/SettingsSection.vue'
 import { useWorkbench } from '@/stores/workbench'
 import { defaults, views, type Preferences } from '@/types'
+import { configured } from '@/services/privacy'
 
 const props = defineProps<{ open: boolean; section?: string }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
 const store = useWorkbench(), p = computed(() => store.preferences), tagBusy = ref(false), category = ref('general')
 const categories = [
-  { value: 'general', label: '通用', icon: SlidersHorizontalIcon, description: '管理工作区布局、隐私与应用信息。' },
-  { value: 'appearance', label: '外观', icon: PaletteIcon, description: '选择适合你的主题与界面尺寸。' },
-  { value:'safety',label:'保存与备份',icon:FileTextIcon,description:'管理保存策略、历史版本与工作区备份。' },
-  { value:'writing',label:'写作',icon:PenLineIcon,description:'配置编辑辅助、正文排版与源码显示。' },
-  { value: 'templates', label: '模板管理', icon: FileTextIcon, description: '保存常用文档结构，在新建文档时选择使用。' },
-  { value: 'tags', label: '标签管理', icon: TagsIcon, description: '管理标签名称与颜色；重命名或删除会同步更新工作区文档（含归档）。' },
-  { value: 'shortcuts', label: '快捷键', icon: KeyboardIcon, description: '少一点点击，让写作更连贯。' },
-  { value:'desktop',label:'其它',icon:MonitorIcon,description:'配置桌面行为与其它偏好。' },
-  { value:'about',label:'关于',icon:InfoIcon,description:'查看 MarkFlow 版本与更新。' },
+  { value: 'general', label: '通用', icon: SlidersHorizontalIcon, description: '管理工作区布局、隐私与应用信息' },
+  { value: 'appearance', label: '外观', icon: PaletteIcon, description: '选择适合你的主题与界面尺寸' },
+  { value:'safety',label:'保存与备份',icon:FileTextIcon,description: '管理保存策略、历史版本与工作区备份' },
+  { value:'writing',label:'写作',icon:PenLineIcon,description: '配置编辑辅助、正文排版与源码显示' },
+  { value: 'templates', label: '模板管理', icon: FileTextIcon, description: '保存常用文档结构，在新建文档时选择使用' },
+  { value: 'tags', label: '标签管理', icon: TagsIcon, description: '管理标签名称与颜色；重命名或删除会同步更新工作区文档（含归档）' },
+  { value: 'shortcuts', label: '快捷键', icon: KeyboardIcon, description: '少一点点击，让写作更连贯' },
+  { value:'desktop',label:'其它',icon:MonitorIcon,description: '配置桌面行为与其它偏好' },
+  { value:'about',label:'关于',icon:InfoIcon,description: '查看 MarkFlow 版本与更新' },
 ]
 const templateHelp=ref(false)
 const settingsQuery=ref('')
@@ -86,21 +87,21 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
               <FieldGroup class="gap-0">
 <SettingsSection title="文档导航"><NavigationSettings/></SettingsSection>
 <SettingsSection title="工作区布局">
-                <SettingsRow label="默认编辑视图" description="首次打开文档时使用的编辑方式。"><Select :model-value="p.defaultView" @update:model-value="v => p.defaultView = v as typeof p.defaultView"><SelectTrigger aria-label="默认编辑视图"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="view in views" :key="view.value" :value="view.value"><component :is="viewIcons[view.value]" />{{ view.label }}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
-                <SettingsRow id="sync-scroll" label="分屏同步滚动" description="编辑源码时，让右侧预览跟随阅读位置。"><div class="flex justify-end"><Switch id="sync-scroll" v-model="p.syncScroll" /></div></SettingsRow>
-                <SettingsRow id="sidebar-visible" label="显示工作区侧栏" description="在左侧浏览本地文件夹和文档。"><div class="flex justify-end"><Switch id="sidebar-visible" v-model="p.sidebar" /></div></SettingsRow>
-                <SettingsRow id="outline-visible" label="显示文档大纲" description="在右侧查看章节，并快速跳转。"><div class="flex justify-end"><Switch id="outline-visible" v-model="p.outline" /></div></SettingsRow>
-                <SettingsRow id="header-visible" label="显示顶部菜单" description="提供文件、编辑、视图和导出的完整入口。"><div class="flex justify-end"><Switch id="header-visible" v-model="p.header" /></div></SettingsRow>
-                <SettingsRow label="收起侧栏宽度" description="调整折叠侧栏的图标区域，默认 50px。"><SettingsNumberSelect v-model="p.collapsedSidebarWidth" :min="40" :max="120" :presets="widthSizes" label="收起侧栏宽度" /></SettingsRow>
+                <SettingsRow label="默认编辑视图" description="首次打开文档时使用的编辑方式"><Select :model-value="p.defaultView" @update:model-value="v => p.defaultView = v as typeof p.defaultView"><SelectTrigger aria-label="默认编辑视图"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="view in views" :key="view.value" :value="view.value"><component :is="viewIcons[view.value]" />{{ view.label }}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
+                <SettingsRow id="sync-scroll" label="分屏同步滚动" description="编辑源码时，让右侧预览跟随阅读位置"><div class="flex justify-end"><Switch id="sync-scroll" v-model="p.syncScroll" /></div></SettingsRow>
+                <SettingsRow id="sidebar-visible" label="显示工作区侧栏" description="在左侧浏览本地文件夹和文档"><div class="flex justify-end"><Switch id="sidebar-visible" v-model="p.sidebar" /></div></SettingsRow>
+                <SettingsRow id="outline-visible" label="显示文档大纲" description="在右侧查看章节，并快速跳转"><div class="flex justify-end"><Switch id="outline-visible" v-model="p.outline" /></div></SettingsRow>
+                <SettingsRow id="header-visible" label="显示顶部菜单" description="提供文件、编辑、视图和导出的完整入口"><div class="flex justify-end"><Switch id="header-visible" v-model="p.header" /></div></SettingsRow>
+                <SettingsRow label="收起侧栏宽度" description="调整折叠侧栏的图标区域，默认 50px"><SettingsNumberSelect v-model="p.collapsedSidebarWidth" :min="40" :max="120" :presets="widthSizes" label="收起侧栏宽度" /></SettingsRow>
               </SettingsSection>
               </FieldGroup>
-              <SettingsSection id="settings-privacy" title="隐私与锁屏"><PrivacySettings/></SettingsSection>
+              <SettingsSection id="settings-privacy" title="隐私与锁屏" class="mt-4" :status="configured ? '已设置密码' : '未设置密码'" :status-tone="configured ? 'primary' : 'muted'"><PrivacySettings/></SettingsSection>
             </TabsContent>
             <TabsContent value="appearance" class="m-0 outline-none">
               <FieldGroup class="gap-0">
                 <SettingsSection title="主题与界面"><MaterialSettings />
-                <SettingsRow label="显示模式" description="跟随系统可以自动切换亮色与暗色。"><ToggleGroup type="single" variant="segmented" :spacing="1" :model-value="p.mode" aria-label="显示模式" @update:model-value="v => { if (v) p.mode = v as typeof p.mode }"><ToggleGroupItem value="light"><SunIcon />亮色</ToggleGroupItem><ToggleGroupItem value="dark"><MoonIcon />暗色</ToggleGroupItem><ToggleGroupItem value="system"><MonitorIcon />系统</ToggleGroupItem></ToggleGroup></SettingsRow>
-                <SettingsRow label="界面密度" description="调整列表与工具栏的留白。"><Select v-model="p.density"><SelectTrigger aria-label="界面密度"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem value="compact">紧凑</SelectItem><SelectItem value="standard">标准</SelectItem><SelectItem value="comfortable">宽松</SelectItem></SelectGroup></SelectContent></Select></SettingsRow><SettingsRow label="背景颜色" description="立即预览自定义背景，可恢复主题默认。"><div class="flex items-center gap-2"><input :value="p.background||'#ffffff'" type="color" aria-label="自定义背景颜色" class="size-8" @input="p.background=($event.target as HTMLInputElement).value"/><Button variant="ghost" size="sm" @click="p.background=''">默认</Button></div></SettingsRow><SettingsRow label="正文颜色" description="对比度不足时自动使用清晰的文字颜色。"><div class="flex items-center gap-2"><input :value="p.textColor||'#333333'" type="color" aria-label="自定义正文颜色" class="size-8" @input="p.textColor=($event.target as HTMLInputElement).value"/><Button variant="ghost" size="sm" @click="p.textColor=''">默认</Button></div></SettingsRow><SettingsRow label="代码主题"><Select v-model="p.codeTheme"><SelectTrigger aria-label="代码主题"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem value="auto">跟随界面</SelectItem><SelectItem value="light">亮色代码</SelectItem><SelectItem value="dark">暗色代码</SelectItem><SelectItem value="nord">极地</SelectItem><SelectItem value="sepia">暖纸</SelectItem></SelectGroup></SelectContent></Select></SettingsRow><SettingsRow label="全局界面字号" description="调整菜单、设置和按钮大小，不影响正文字号。"><SettingsNumberSelect v-model="p.uiSize" :min="12" :max="20" :presets="uiSizes" label="全局界面字号" /></SettingsRow>
+                <SettingsRow label="显示模式" description="跟随系统可以自动切换亮色与暗色"><ToggleGroup type="single" variant="segmented" :spacing="1" :model-value="p.mode" aria-label="显示模式" @update:model-value="v => { if (v) p.mode = v as typeof p.mode }"><ToggleGroupItem value="light"><SunIcon />亮色</ToggleGroupItem><ToggleGroupItem value="dark"><MoonIcon />暗色</ToggleGroupItem><ToggleGroupItem value="system"><MonitorIcon />系统</ToggleGroupItem></ToggleGroup></SettingsRow>
+                <SettingsRow label="界面密度" description="调整列表与工具栏的留白"><Select v-model="p.density"><SelectTrigger aria-label="界面密度"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem value="compact">紧凑</SelectItem><SelectItem value="standard">标准</SelectItem><SelectItem value="comfortable">宽松</SelectItem></SelectGroup></SelectContent></Select></SettingsRow><SettingsRow label="背景颜色" description="立即预览自定义背景，可恢复主题默认"><div class="flex items-center gap-2"><input :value="p.background||'#ffffff'" type="color" aria-label="自定义背景颜色" class="size-8" @input="p.background=($event.target as HTMLInputElement).value"/><Button variant="ghost" size="sm" @click="p.background=''">默认</Button></div></SettingsRow><SettingsRow label="正文颜色" description="对比度不足时自动使用清晰的文字颜色"><div class="flex items-center gap-2"><input :value="p.textColor||'#333333'" type="color" aria-label="自定义正文颜色" class="size-8" @input="p.textColor=($event.target as HTMLInputElement).value"/><Button variant="ghost" size="sm" @click="p.textColor=''">默认</Button></div></SettingsRow><SettingsRow label="代码主题"><Select v-model="p.codeTheme"><SelectTrigger aria-label="代码主题"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem value="auto">跟随界面</SelectItem><SelectItem value="light">亮色代码</SelectItem><SelectItem value="dark">暗色代码</SelectItem><SelectItem value="nord">极地</SelectItem><SelectItem value="sepia">暖纸</SelectItem></SelectGroup></SelectContent></Select></SettingsRow><SettingsRow label="全局界面字号" description="调整菜单、设置和按钮大小，不影响正文字号"><SettingsNumberSelect v-model="p.uiSize" :min="12" :max="20" :presets="uiSizes" label="全局界面字号" /></SettingsRow>
                 <Field class="gap-4 py-5">
                   <FieldLabel>主题色</FieldLabel>
                   <div class="flex flex-wrap items-start gap-3">
@@ -123,15 +124,15 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
 
 <TabsContent value="writing" class="m-0 outline-none"><SettingsSection title="编辑辅助"><AdvancedSettings section="writing"/></SettingsSection><div id="settings-typography">
               <p v-if="fontError" class="py-2 text-xs text-muted-foreground">{{fontError}}</p><FieldGroup class="gap-0"><SettingsSection title="正文排版">
-                <SettingsRow id="bodyFont" label="正文字体" description="选择本机已安装字体，或跟随系统默认字体。"><Select v-model="p.bodyFont"><SelectTrigger id="bodyFont" aria-label="正文字体" class="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="font in fontOptions" :key="font" :value="font">{{font==='system-ui'?'系统默认字体':font==='ui-monospace'?'系统等宽字体':font}}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
+                <SettingsRow id="bodyFont" label="正文字体" description="选择本机已安装字体，或跟随系统默认字体"><Select v-model="p.bodyFont"><SelectTrigger id="bodyFont" aria-label="正文字体" class="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="font in fontOptions" :key="font" :value="font">{{font==='system-ui'?'系统默认字体':font==='ui-monospace'?'系统等宽字体':font}}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <SettingsRow label="正文字号"><SettingsNumberSelect v-model="p.bodySize" :min="10" :max="36" :presets="bodySizes" label="正文字号" /></SettingsRow>
-                <SettingsRow label="正文行高" description="应用于可视化编辑和阅读预览。"><Select :model-value="String(p.lineHeight)" @update:model-value="v => p.lineHeight = Number(v)"><SelectTrigger aria-label="正文行高"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="height in [...new Set([1.4,1.6,1.8,1.9,2,2.2,2.5,p.lineHeight])].sort()" :key="height" :value="String(height)">{{ height }} 倍{{ height === 1.9 ? '（默认）' : '' }}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
-                <SettingsRow label="正文宽度" description="标准模式保持约 760px 的阅读宽度。"><Select v-model="p.documentStyle"><SelectTrigger aria-label="文档显示样式"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="standard">标准模式</SelectItem><SelectItem value="wide">超宽模式</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
+                <SettingsRow label="正文行高" description="应用于可视化编辑和阅读预览"><Select :model-value="String(p.lineHeight)" @update:model-value="v => p.lineHeight = Number(v)"><SelectTrigger aria-label="正文行高"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="height in [...new Set([1.4,1.6,1.8,1.9,2,2.2,2.5,p.lineHeight])].sort()" :key="height" :value="String(height)">{{ height }} 倍{{ height === 1.9 ? '（默认）' : '' }}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
+                <SettingsRow label="正文宽度" description="标准模式保持约 760px 的阅读宽度"><Select v-model="p.documentStyle"><SelectTrigger aria-label="文档显示样式"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="standard">标准模式</SelectItem><SelectItem value="wide">超宽模式</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <div class="my-4 overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-5"><p class="mb-3 text-[11px] text-muted-foreground">排版预览</p><p class="break-words font-[family-name:var(--body-font)] text-[length:var(--body-size)] leading-[var(--body-line-height)]">把想法写下来，让文字慢慢长出来。<br />A quiet space for your next idea.</p></div>
 </SettingsSection><SettingsSection title="源码与代码">
                 <SettingsRow id="codeFont" label="源码 / 代码字体"><Select v-model="p.codeFont"><SelectTrigger id="codeFont" aria-label="源码 / 代码字体" class="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem v-for="font in fontOptions" :key="font" :value="font">{{font==='system-ui'?'系统默认字体':font==='ui-monospace'?'系统等宽字体':font}}</SelectItem></SelectGroup></SelectContent></Select></SettingsRow>
                 <SettingsRow label="源码 / 代码字号"><SettingsNumberSelect v-model="p.codeSize" :min="10" :max="36" :presets="uiSizes" label="源码 / 代码字号" /></SettingsRow>
-                <SettingsRow id="line-numbers" label="显示行号" description="源码显示行号，其余视图显示内容块的起始行号。"><div class="flex justify-end"><Switch id="line-numbers" v-model="p.lineNumbers" /></div></SettingsRow>
+                <SettingsRow id="line-numbers" label="显示行号" description="源码显示行号，其余视图显示内容块的起始行号"><div class="flex justify-end"><Switch id="line-numbers" v-model="p.lineNumbers" /></div></SettingsRow>
               </SettingsSection></FieldGroup>
             </div></TabsContent>
             <TabsContent v-for="section in ['safety','templates','desktop']" :key="section" :value="section" class="settings-content m-0 outline-none"><AdvancedSettings :section="section"/></TabsContent>

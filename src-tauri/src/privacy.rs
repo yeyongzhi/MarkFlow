@@ -11,7 +11,16 @@ fn verify(state:&AppState,password:&str)->Result<()> {
  let valid=PasswordHash::new(&value).ok().is_some_and(|h|Argon2::default().verify_password(password.as_bytes(),&h).is_ok());
  if !valid{attempts.0+=1;if attempts.0>=5{attempts.1=now()+30}return Err(error("PASSWORD","密码错误"))}*attempts=(0,0);Ok(())
 }
-#[tauri::command] pub fn privacy_status(state:State<'_,AppState>)->Value{json!({"configured":hash(&state).is_some(),"locked":state.privacy.locked.load(Ordering::SeqCst)})}
+#[tauri::command] pub fn privacy_status(state:State<'_,AppState>)->Value{
+ let configured=hash(&state).is_some();
+ let core=state.core.lock().unwrap();
+ let preferences=&core.preferences;
+ json!({
+  "configured":configured,
+  "locked":state.privacy.locked.load(Ordering::SeqCst),
+  "theme":{"mode":preferences["mode"],"accent":preferences["accent"]}
+ })
+}
 #[tauri::command] pub fn privacy_lock(state:State<'_,AppState>)->Result<()>{if hash(&state).is_none(){return Err(error("PASSWORD","请先在设置中设置锁屏密码"))}state.privacy.locked.store(true,Ordering::SeqCst);Ok(())}
 #[tauri::command] pub fn privacy_unlock(state:State<'_,AppState>,password:String)->Result<()>{verify(&state,&password)?;state.privacy.locked.store(false,Ordering::SeqCst);Ok(())}
 #[tauri::command] pub fn privacy_password(state:State<'_,AppState>,current:String,password:String)->Result<()>{

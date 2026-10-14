@@ -24,6 +24,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Check release version
         run: node scripts/version.mjs check "${{ github.ref_name }}"
+      - name: Prepare release notes
+        id: release_notes
+        run: node scripts/release-notes.mjs "${{ github.ref_name }}"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Check frontend
@@ -43,8 +46,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: MarkFlow ${{ github.ref_name }}
-          releaseBody: 'Windows x64 安装包。安装时可选择目录，更新前请备份数据目录。变更记录见仓库 CHANGELOG.md。更新包包含 Tauri 签名，安装程序尚未配置 Windows 代码签名。'
+          releaseName: ${{ github.ref_name }}
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
           releaseDraft: true
