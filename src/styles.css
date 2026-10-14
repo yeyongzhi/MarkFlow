@@ -244,9 +244,6 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); o
 .document-info { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 20px; max-height: 60vh; overflow-y: auto; }
 .document-info dt { color: var(--muted-foreground); }
 .document-info dd { min-width: 0; overflow-wrap: anywhere; }
-.recovery-list { display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto; }
-.recovery-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); padding: 8px 0 16px; }
-.recovery-item p { font-size: calc(11px * var(--ui-scale, 1)); margin-top: 4px; color: var(--muted-foreground); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 
 /* Productivity controls stay within small windows and follow semantic theme tokens. */

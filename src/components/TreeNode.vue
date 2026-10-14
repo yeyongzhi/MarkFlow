@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { StarIcon, ChevronRightIcon, FolderIcon, FolderOpenIcon, FileTextIcon, MoreHorizontalIcon, FilePlusIcon, FolderPlusIcon, PencilIcon, FolderInputIcon, Trash2Icon, ArchiveIcon, FolderMinusIcon, FolderSearchIcon } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { useWorkbench, treeKey } from '@/stores/workbench'
 import { cn } from '@/lib/utils'
@@ -26,13 +27,13 @@ function action(type: string) { emit('action', type, props.workspace.id, props.e
 <template>
   <div role="treeitem" :aria-expanded="entry.isDir ? !!expanded : undefined" :aria-selected="!entry.isDir && store.active?.workspaceId === workspace.id && store.active?.path === entry.path">
     <div :class="cn('tree-row group mb-0.5 flex min-h-9 items-center rounded-lg pr-1 transition-colors hover:bg-muted', root && 'workspace-row mb-1 mt-3 font-medium', !entry.isDir && store.active?.workspaceId === workspace.id && store.active.path === entry.path && 'tree-row-active bg-accent text-accent-foreground')" :style="{ paddingLeft: `${12 + (depth || 0) * 16}px` }">
-      <button class="tree-label flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-xs" @keydown="keydown" :title="root ? workspace.path : entry.path" @click="activate">
+      <Tooltip><TooltipTrigger as-child><button class="tree-label flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-xs" @keydown="keydown" @click="activate">
         <ChevronRightIcon v-if="entry.isDir" :class="cn('tree-chevron size-3 shrink-0 text-muted-foreground transition-transform duration-150', expanded && 'rotate-90')" />
         <span v-else class="w-3 shrink-0" />
         <component :is="entry.isDir ? expanded ? FolderOpenIcon : FolderIcon : FileTextIcon" :class="cn('tree-icon size-4 shrink-0 text-muted-foreground', root && 'text-primary', !entry.isDir && store.active?.path === entry.path && store.active?.workspaceId === workspace.id && 'text-accent-foreground')" />
         <span class="truncate">{{ entry.name }}</span>
         <span v-if="root && !workspace.available" class="text-xs text-destructive">不可访问</span>
-      </button>
+      </button></TooltipTrigger><TooltipContent side="right" class="max-w-80 break-all">{{ root ? workspace.path : entry.path }}</TooltipContent></Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger as-child><Button variant="ghost" size="icon-xs" class="tree-menu opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" :aria-label="`${entry.name} 的菜单`"><MoreHorizontalIcon /></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="start" class="min-w-48">
