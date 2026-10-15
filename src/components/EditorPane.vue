@@ -19,7 +19,9 @@ import { imageReferences, imageMarkdown, type ImageReference } from '@/services/
 
 const props = defineProps<{ document: Document; active: boolean; dark: boolean }>(), store = useWorkbench()
 const live = ref<HTMLElement>(), preview = ref<HTMLElement>(), source = ref<HTMLTextAreaElement>(), host = ref<HTMLElement>(), initializing = ref(false)
-const emit = defineEmits<{ structure:[index:number]; selection: [text: string] }>()
+const emit = defineEmits<{ structure:[kind:'table'|'code',index:number]; selection: [text: string] }>()
+const tableActions = ref({ open: false, top: 0, left: 0, index: 0, rows: 0, columns: 0 })
+let hoveredTable: HTMLTableElement | undefined, tableActionsCloseTimer: ReturnType<typeof setTimeout> | undefined
 const wikiQuery=ref<string|null>(null),wikiIndex=ref(0),wikiStart=ref(0)
 const wikiOptions=computed(()=>knowledgeDocs.value.filter(d=>d.workspaceId===props.document.workspaceId).flatMap(d=>{const query=wikiQuery.value||'',hash=query.indexOf('#');return hash>=0?d.path.replace(/\.md$/i,'')===query.slice(0,hash)?d.titles.filter(h=>h.text.includes(query.slice(hash+1))).map(h=>({target:d.path.replace(/\.md$/i,'')+'#'+h.text,label:d.path+' · '+h.text})):[]:d.path.toLowerCase().includes(query.toLowerCase())?[{target:d.path.replace(/\.md$/i,''),label:d.path}]:[]}).slice(0,12))
 async function updateWiki(){const el=source.value;if(!el||props.document.view==='live')return;const match=/\[\[([^\]\n]*)$/.exec(el.value.slice(0,el.selectionStart));wikiQuery.value=match?.[1]??null;wikiIndex.value=0;if(match){wikiStart.value=el.selectionStart-match[0].length;try{await loadKnowledge()}catch{}}}
@@ -29,6 +31,8 @@ let slashRange:{start:number;end:number}|undefined, slashLiveRange:Range|undefin
 const slashItems=[{id:'heading',label:'标题',text:'# '},{id:'list',label:'列表',text:'- '},{id:'quote',label:'引用',text:'> '},{id:'task',label:'任务列表',text:'- [ ] '},{id:'table',label:'表格',text:'| 标题 | 标题 |\n| --- | --- |\n| 内容 | 内容 |\n'},{id:'code',label:'代码块',text:'```text\n\n```'},{id:'image',label:'图片',text:''},{id:'math',label:'数学公式',text:'$$\nx^2+y^2=z^2\n$$\n'},{id:'mermaid',label:'Mermaid 图表',text:'```mermaid\nflowchart LR\n  A[开始] --> B[完成]\n```\n'},{id:'footnote',label:'脚注',text:'注释[^1]\n\n[^1]: 注释内容\n'},{id:'callout',label:'提示块',text:'> [!NOTE]\n> 提示内容\n'},{id:'divider',label:'分隔线',text:'---\n'}]
 const slashOptions=computed(()=>slashItems.filter(i=>!slashQuery.value||i.label.includes(slashQuery.value)||i.id.includes(slashQuery.value)))
 const imageInput = ref<HTMLInputElement>(), imageTools = ref<InstanceType<typeof ImageTools>>(), selectedImage = ref<SelectedImage>(), imageBusy = ref(false)
+const tablePicker = ref({ open: false, top: 0, left: 0, rows: 2, columns: 2 })
+let tableOpenTimer: ReturnType<typeof setTimeout> | undefined, tableCloseTimer: ReturnType<typeof setTimeout> | undefined
 let imageTarget: { reference: ImageReference; snapshot: string } | undefined
 let importTarget: typeof imageTarget, insertionSnapshot = '', insertionRange: { start: number; end: number } | undefined
 let liveInsertionRange: Range | undefined
@@ -160,12 +164,85 @@ function placeToolbar() {
   const toolbar = externalToolbar || live.value?.querySelector<HTMLElement>('.vditor-toolbar')
   if (target && toolbar) { toolbar.classList.add('lexly-format-toolbar'); target.appendChild(toolbar); externalToolbar = toolbar;configureToolbar() }
 }
-function configureToolbar(){if(!externalToolbar)return;const ids=[...store.preferences.toolbarOrder,...toolbarItems.map(i=>i.id)].filter((id,i,a)=>a.indexOf(id)===i);for(const id of ids){const item=externalToolbar.querySelector<HTMLElement>(`button[data-type="${id}"]`)?.closest<HTMLElement>('.vditor-toolbar__item');if(item){item.hidden=store.preferences.toolbarHidden.includes(id);externalToolbar.appendChild(item)}}externalToolbar.querySelectorAll('.vditor-toolbar__divider').forEach(d=>d.remove())
+function configureToolbar(){if(!externalToolbar)return;const ids=[...store.preferences.toolbarOrder,...toolbarItems.map(i=>i.id)].filter((id,i,a)=>a.indexOf(id)===i);for(const id of ids){const button=externalToolbar.querySelector<HTMLButtonElement>(`button[data-type="${id}"]`);const item=button?.closest<HTMLElement>('.vditor-toolbar__item');if(item){item.hidden=store.preferences.toolbarHidden.includes(id);externalToolbar.appendChild(item)}if(id==='table'&&button){button.title='';button.setAttribute('aria-label','插入表格')}}externalToolbar.querySelectorAll('.vditor-toolbar__divider').forEach(d=>d.remove())
 }
-function toolbarClick(e:Event){const button=(e.target as HTMLElement).closest<HTMLElement>('button[data-type]');if(button?.dataset.type==='undo'||button?.dataset.type==='redo'){e.preventDefault();e.stopImmediatePropagation();syncLive();store.undo(props.document,button.dataset.type==='redo')}
+function openTablePicker(button: HTMLElement) {
+  clearTimeout(tableCloseTimer)
+  const rect = button.getBoundingClientRect(), width = 236, height = 300
+  tablePicker.value = { open: true, top: Math.max(8, Math.min(rect.bottom + 8, innerHeight - height - 8)), left: Math.max(8, Math.min(rect.left, innerWidth - width - 8)), rows: 2, columns: 2 }
+}
+function scheduleTablePickerClose() { clearTimeout(tableOpenTimer); clearTimeout(tableCloseTimer); tableCloseTimer = setTimeout(() => { tablePicker.value.open = false }, 220) }
+function keepTablePickerOpen() { clearTimeout(tableCloseTimer) }
+function toolbarPointerOver(event: Event) {
+  const button = (event.target as HTMLElement).closest<HTMLElement>('button[data-type="table"]')
+  if (!button) return
+  clearTimeout(tableCloseTimer)
+  if (tablePicker.value.open || tableOpenTimer) return
+  bookmark()
+  tableOpenTimer = setTimeout(() => { tableOpenTimer = undefined; openTablePicker(button) }, 160)
+}
+function toolbarPointerOut(event: Event) {
+  const button = (event.target as HTMLElement).closest<HTMLElement>('button[data-type="table"]')
+  const item = button?.closest<HTMLElement>('.vditor-toolbar__item')
+  if (item && !item.contains((event as PointerEvent).relatedTarget as Node | null)) scheduleTablePickerClose()
+}
+function insertTable(rows: number, columns: number) {
+  if (!editor || props.document.view !== 'live') return
+  const header = '| ' + Array.from({ length: columns }, () => '标题').join(' | ') + ' |'
+  const separator = '| ' + Array.from({ length: columns }, () => '---').join(' | ') + ' |'
+  const row = '| ' + Array.from({ length: columns }, () => '内容').join(' | ') + ' |'
+  store.beginOperation(props.document, 'format'); restoreBookmark(); editor.focus(); editor.insertValue([header, separator, ...Array.from({ length: rows - 1 }, () => row)].join('\n') + '\n'); syncLive()
+  tablePicker.value.open = false
+}
+function toolbarClick(e:Event){const button=(e.target as HTMLElement).closest<HTMLElement>('button[data-type]');if(button?.dataset.type==='table'){e.preventDefault();e.stopImmediatePropagation();bookmark();openTablePicker(button);return}if(button?.dataset.type==='undo'||button?.dataset.type==='redo'){e.preventDefault();e.stopImmediatePropagation();syncLive();store.undo(props.document,button.dataset.type==='redo')}
 }
 watch(()=>[store.preferences.toolbarOrder.join(),store.preferences.toolbarHidden.join()],configureToolbar)
-function toolbarReady(){externalToolbar?.addEventListener('click',toolbarClick,true)
+function toolbarReady(){externalToolbar?.addEventListener('click',toolbarClick,true);externalToolbar?.addEventListener('pointerover',toolbarPointerOver);externalToolbar?.addEventListener('pointerout',toolbarPointerOut)
+}
+function showTableActions(table: HTMLTableElement) {
+  clearTimeout(tableActionsCloseTimer)
+  if (hoveredTable === table && tableActions.value.open) return
+  const tableRoot = table.closest<HTMLElement>('.markdown-body, .vditor-reset')
+  if (!tableRoot) return
+  const index = [...tableRoot.querySelectorAll('table')].indexOf(table)
+  if (index < 0) return
+  hoveredTable = table
+  const rect = table.getBoundingClientRect(), width = 390, height = 52
+  tableActions.value = { open: true, top: Math.max(8, rect.top - height - 6), left: Math.max(8, Math.min(rect.right - width, innerWidth - width - 8)), index, rows: table.querySelectorAll('tr').length, columns: table.querySelector('tr')?.children.length || 0 }
+}
+function tablePointerOver(event: PointerEvent) {
+  const table = (event.target as HTMLElement).closest<HTMLTableElement>('table')
+  if (table) showTableActions(table)
+}
+function closeTableActionsLater() { clearTimeout(tableActionsCloseTimer); tableActionsCloseTimer = setTimeout(() => { tableActions.value.open = false; hoveredTable = undefined }, 260) }
+function keepTableActionsOpen() { clearTimeout(tableActionsCloseTimer) }
+function tablePointerOut(event: PointerEvent) {
+  const table = (event.target as HTMLElement).closest<HTMLTableElement>('table')
+  if (table && !table.contains(event.relatedTarget as Node | null)) closeTableActionsLater()
+}
+function pipeCells(line: string) {
+  let value = line.trim()
+  if (value.startsWith('|')) value = value.slice(1)
+  if (value.endsWith('|') && !value.endsWith('\\|')) value = value.slice(0, -1)
+  const cells: string[] = []; let cell = '', escaped = false
+  for (const char of value) { if (char === '|' && !escaped) { cells.push(cell.trim()); cell = ''; continue }; cell += char; escaped = char === '\\' ? !escaped : false }
+  cells.push(cell.trim())
+  return cells
+}
+function changeTable(operation: 'add-row' | 'delete-row' | 'add-column' | 'delete-column') {
+  const d = props.document
+  if (d.view === 'live') syncLive()
+  const tables = markdown.parse(d.text, {}).filter(token => token.type === 'table_open' && token.map)
+  const block = tables[tableActions.value.index]?.map
+  if (!block) { toast.warning('表格已变化，请重新悬停后再试。'); tableActions.value.open = false; return }
+  const lines = d.text.split('\n'), rows = lines.slice(block[0], block[1]).map(pipeCells), width = Math.max(0, ...rows.map(row => row.length))
+  if (operation === 'add-row') { if (rows.length >= 101) { toast.info('表格最多支持 100 行。'); return }; rows.push(Array(width).fill('')) }
+  if (operation === 'delete-row') { if (rows.length <= 2) { toast.info('表格至少保留标题行。'); return }; rows.pop() }
+  if (operation === 'add-column') { if (width >= 20) { toast.info('表格最多支持 20 列。'); return }; rows.forEach((row, index) => row.push(index === 1 ? '---' : '')) }
+  if (operation === 'delete-column') { if (width <= 1) { toast.info('表格至少保留一列。'); return }; rows.forEach(row => row.pop()) }
+  const next = [...lines.slice(0, block[0]), ...rows.map(row => '| ' + row.join(' | ') + ' |'), ...lines.slice(block[1])].join('\n')
+  store.beginOperation(d, 'table'); store.change(d, next, 'table'); d.generation++
+  tableActions.value.open = false; hoveredTable = undefined
 }
 function format(name: string) {
   if(name==='undo'||name==='redo'){syncLive();store.undo(props.document,name==='redo');return}
@@ -193,7 +270,7 @@ function destroyLive() {
   // Vditor 4's destroy() unconditionally accesses the unused WYSIWYG engine in IR mode.
   const engine = instance.vditor.wysiwyg
   if (!engine) instance.vditor.wysiwyg = { unbindListener: () => {} } as NonNullable<Vditor['vditor']['wysiwyg']>
-  try { instance.destroy() } finally { if (!engine) instance.vditor.wysiwyg = engine; externalToolbar?.removeEventListener('click',toolbarClick,true);externalToolbar?.remove(); externalToolbar = undefined }
+  try { instance.destroy() } finally { if (!engine) instance.vditor.wysiwyg = engine; clearTimeout(tableOpenTimer);clearTimeout(tableCloseTimer);tablePicker.value.open=false;externalToolbar?.removeEventListener('click',toolbarClick,true);externalToolbar?.removeEventListener('pointerover',toolbarPointerOver);externalToolbar?.removeEventListener('pointerout',toolbarPointerOut);externalToolbar?.remove(); externalToolbar = undefined }
 }
 function canonical(value: string) { for (const [data, url] of reverseImages) value = value.replaceAll(data, url); return value }
 function hydrateImage(img: HTMLImageElement, data: string, url: string) {
@@ -237,7 +314,6 @@ function syncLive() {
 async function initLive() {
   if (!live.value || props.document.view !== 'live' || !props.active) return
   if (props.document.text.length > 512000) { if (!initializing.value) { observer?.disconnect(); destroyLive() }; store.setView('source'); toast.info('大文档已使用源码视图，避免可视化编辑卡顿。'); return }
-  if(/\[\[[^\]\n]+\]\]|^\s*<(?:[a-zA-Z]|!--)/m.test(documentBody(props.document.text))){store.setView('split');toast.info('此文档包含双向链接或 HTML，使用分屏保留完整源码。');return}
   if (editor || initializing.value) return
   initializing.value = true
   const initialGeneration = props.document.generation
@@ -250,14 +326,15 @@ async function initLive() {
     input: () => {syncLive(); updateSlash(); typewriter()},
   })
 }
-watch(() => props.document.view, async view => { await nextTick(); if (view === 'live') { await initLive(); if (props.document.view === 'live' && editor && !initializing.value && documentBody(props.document.text) !== liveText) { suppress = true; editor.setValue(documentBody(props.document.text), true); liveText = canonical(editor.getValue()); suppress = false } }; void decorateImages(preview.value) })
+watch(() => props.document.view, async view => { tableActions.value.open=false;hoveredTable=undefined;await nextTick(); if (view === 'live') { await initLive(); if (props.document.view === 'live' && editor && !initializing.value && documentBody(props.document.text) !== liveText) { suppress = true; editor.setValue(documentBody(props.document.text), true); liveText = canonical(editor.getValue()); suppress = false } }; void decorateImages(preview.value) })
 watch(() => props.document.generation, () => { imageCache.clear(); if (props.document.text.length > 512000 && !initializing.value) { observer?.disconnect(); destroyLive() }; if (editor && !initializing.value) { suppress = true; editor.setValue(documentBody(props.document.text), true); liveText = canonical(editor.getValue()); suppress = false }; void nextTick(() => decorateImages(preview.value)) })
-watch(()=>[html.value,store.preferences.codeWrap,store.preferences.codeNumbers,store.preferences.codeHighlight], () => void nextTick(async () => {await decorateImages(preview.value);await decorateRichContent(preview.value,{fold:true,wrap:store.preferences.codeWrap,numbers:store.preferences.codeNumbers,highlight:store.preferences.codeHighlight,edit:index=>emit('structure',index)})}))
+watch(()=>[html.value,store.preferences.codeWrap,store.preferences.codeNumbers,store.preferences.codeHighlight], () => void nextTick(async () => {await decorateImages(preview.value);await decorateRichContent(preview.value,{fold:true,wrap:store.preferences.codeWrap,numbers:store.preferences.codeNumbers,highlight:store.preferences.codeHighlight,edit:index=>emit('structure','code',index)})}))
 watch(() => props.dark, value => editor?.setTheme(value ? 'dark' : 'classic'))
 watch(() => [props.active, props.document.view], () => void nextTick(placeToolbar))
 let idleTimer: ReturnType<typeof setTimeout>
 watch(() => props.active, active => {
   clearTimeout(idleTimer)
+  if(!active){clearTimeout(tableActionsCloseTimer);tableActions.value.open=false;hoveredTable=undefined}
   if (active) void nextTick(() => { void initLive(); void decorateImages(preview.value) })
   else idleTimer = setTimeout(() => { if (!initializing.value) { observer?.disconnect(); destroyLive(); imageCache.clear(); reverseImages.clear(); html.value = ''; preview.value?.querySelectorAll('img').forEach(img => img.removeAttribute('src')) } },60000)
 })
@@ -336,21 +413,23 @@ onMounted(() => {window.addEventListener('lexly-heading',headingEvent); void ini
 defineExpose({ jump, jumpLine, selectRange, sync: syncLive, pickImage, bookmark, format, moveBlock })
 </script>
 <template>
-  <div ref="host" class="editor-pane" :data-view="document.view" :data-line-numbers="store.preferences.lineNumbers" :data-document-style="store.preferences.documentStyle" @keydown.capture="editorKey" @scroll.capture="scroll" @load.capture="queueLineNumbers" @error.capture="imageError" @paste.capture="paste" @drop.capture="drop" @dragover.prevent @compositionstart="composition = true" @compositionend="compositionEnd" @click="click" @dblclick="imageDoubleClick">
+  <div ref="host" class="editor-pane" :data-view="document.view" :data-line-numbers="store.preferences.lineNumbers" :data-document-style="store.preferences.documentStyle" @keydown.capture="editorKey" @scroll.capture="scroll" @load.capture="queueLineNumbers" @error.capture="imageError" @paste.capture="paste" @drop.capture="drop" @dragover.prevent @compositionstart="composition = true" @compositionend="compositionEnd" @click="click" @dblclick="imageDoubleClick" @pointerover="tablePointerOver" @pointerout="tablePointerOut">
     <input ref="imageInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" :multiple="!importTarget" hidden aria-label="选择本地图片" @change="chosenImage" />
     <div v-show="document.view === 'live'" ref="live" class="live-editor" />
     <div v-if="initializing && document.view === 'live'" class="editor-loading">正在准备编辑器…</div>
     <div v-show="document.view !== 'live'" class="source-preview-layout" :class="{ 'is-split': document.view === 'split' }">
       <div v-show="document.view === 'source' || document.view === 'split'" class="source-wrapper">
-        <div v-if="document.view === 'split'" class="pane-label">MARKDOWN</div>
+        <div v-if="document.view === 'split'" class="pane-label">源码</div>
         <textarea ref="source" :value="document.text" :wrap="store.preferences.lineNumbers ? 'off' : 'soft'" class="source-editor" aria-label="Markdown 源码" spellcheck="false" @input="sourceInput" @keydown="sourceKey" @blur="store.preferences.saveOnBlur && store.save(document)" />
       </div>
       <div v-show="document.view === 'split' || document.view === 'preview'" class="preview-wrapper">
-        <div v-if="document.view === 'split'" class="pane-label">PREVIEW</div>
+        <div v-if="document.view === 'split'" class="pane-label">预览</div>
         <article ref="preview" class="markdown-body" v-html="html" />
       </div>
     </div>
     <div v-if="store.preferences.lineNumbers" class="line-number-layer" aria-hidden="true"><span v-for="(mark, index) in lineMarks" :key="index" :style="{ top: mark.top + 'px', left: mark.left + 'px' }">{{ mark.line }}</span></div>
     <div v-if="active&&wikiQuery!==null" role="listbox" aria-label="文档链接补全" class="absolute bottom-5 left-8 z-20 flex max-h-72 w-80 flex-col overflow-auto rounded-xl border bg-popover p-1 shadow-lg"><Button v-for="(item,index) in wikiOptions" :key="item.target" :variant="index===wikiIndex?'secondary':'ghost'" role="option" :aria-selected="index===wikiIndex" class="justify-start truncate" @mousedown.prevent @click="chooseWiki(item)">{{item.label}}</Button><p v-if="!wikiOptions.length" class="p-3 text-xs text-muted-foreground">未找到文档；输入 # 可选择章节。</p></div><div v-if="active && slashQuery!==null" class="absolute bottom-5 left-8 z-20 flex max-h-72 w-56 flex-col overflow-auto rounded-xl border bg-popover p-1 shadow-lg" role="listbox" aria-label="斜杠命令"><Button v-for="(item,index) in slashOptions" :key="item.id" :variant="index===slashIndex?'secondary':'ghost'" role="option" :aria-selected="index===slashIndex" class="justify-start" @mousedown.prevent @click="chooseSlash(item)">{{item.label}}</Button><p v-if="!slashOptions.length" class="p-3 text-sm text-muted-foreground">没有匹配命令。</p></div><ImageTools v-if="active" ref="imageTools" :image="selectedImage" :busy="imageBusy" :readonly="document.view === 'preview'" :desktop="desktop" @close="clearImage" @replace="pickImage(true)" @describe="describeImage" @remove="applyImage('')" @copy="copyImagePath" @directory="imageDirectory" />
+    <Teleport to="body"><div v-if="tablePicker.open" class="table-size-picker fixed z-[100] w-60 rounded-xl border bg-popover p-3 text-popover-foreground shadow-xl" :style="{ top: `${tablePicker.top}px`, left: `${tablePicker.left}px` }" role="dialog" aria-label="选择表格大小" @pointerenter="keepTablePickerOpen" @pointerleave="scheduleTablePickerClose" @keydown.esc.prevent.stop="tablePicker.open=false"><div class="mb-2 flex items-center justify-between gap-3"><span class="text-sm font-medium">插入表格</span><span class="whitespace-nowrap text-xs text-muted-foreground">{{ tablePicker.rows }} 行 × {{ tablePicker.columns }} 列</span></div><div class="grid grid-cols-10 gap-1" role="group" aria-label="表格行列数"><template v-for="row in 8" :key="row"><button v-for="column in 10" :key="column" type="button" class="size-4 rounded-[3px] border transition-colors" :class="row<=tablePicker.rows&&column<=tablePicker.columns?'border-primary bg-primary':'border-border bg-background hover:border-primary'" :aria-label="`插入 ${row} 行 ${column} 列表格`" :aria-pressed="row===tablePicker.rows&&column===tablePicker.columns" @pointerenter="tablePicker.rows=row;tablePicker.columns=column" @focus="tablePicker.rows=row;tablePicker.columns=column" @pointerdown.prevent @click="insertTable(row,column)" /></template></div><p class="mt-2 text-[11px] text-muted-foreground">悬停选择，点击插入</p></div></Teleport>
+    <Teleport to="body"><div v-if="tableActions.open" class="table-hover-actions fixed z-[100] flex items-center gap-1 rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg" :style="{ top: `${tableActions.top}px`, left: `${tableActions.left}px` }" role="toolbar" aria-label="表格快捷操作" @pointerenter="keepTableActionsOpen" @pointerleave="closeTableActionsLater"><button type="button" title="添加行" aria-label="添加行" class="table-action-button" :disabled="tableActions.rows>=100" @pointerdown.prevent @click="changeTable('add-row')">＋行</button><button type="button" title="删除末行" aria-label="删除末行" class="table-action-button" :disabled="tableActions.rows<=1" @pointerdown.prevent @click="changeTable('delete-row')">－行</button><span class="table-action-divider" aria-hidden="true"/><button type="button" title="添加列" aria-label="添加列" class="table-action-button" :disabled="tableActions.columns>=20" @pointerdown.prevent @click="changeTable('add-column')">＋列</button><button type="button" title="删除末列" aria-label="删除末列" class="table-action-button" :disabled="tableActions.columns<=1" @pointerdown.prevent @click="changeTable('delete-column')">－列</button><span class="table-action-divider" aria-hidden="true"/><button type="button" title="完整编辑表格" aria-label="完整编辑表格" class="table-action-button" @pointerdown.prevent @click="emit('structure','table',tableActions.index);tableActions.open=false">编辑</button></div></Teleport>
   </div>
 </template>

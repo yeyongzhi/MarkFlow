@@ -11,6 +11,12 @@ const props = defineProps<{ workspace: Workspace; entry: Entry; depth?: number; 
 const emit = defineEmits<{ action: [type: string, workspaceId: string, path: string, isDir: boolean]; error: [error: unknown] }>()
 const store = useWorkbench(), key = computed(() => treeKey(props.workspace.id, props.entry.path)), expanded = computed(() => store.expanded[key.value]), children = computed(() => store.tree[key.value] || [])
 const visibleCount = ref(80)
+const tooltipPath = computed(() => {
+  if (!props.root) return props.entry.path
+  const path = props.workspace.path
+  if (path.startsWith('\\\\?\\UNC\\')) return `\\\\${path.slice(8)}`
+  return path.startsWith('\\\\?\\') ? path.slice(4) : path
+})
 const visibleChildren = computed(() => { const activeIndex = children.value.findIndex(e => store.active?.workspaceId === props.workspace.id && store.active.path.startsWith(e.path + (e.isDir ? '/' : ''))); return children.value.slice(0, Math.max(visibleCount.value, activeIndex + 1)) })
 async function activate() { try { if (props.entry.isDir) await store.toggleDirectory(props.workspace.id, props.entry.path); else await store.open(props.workspace.id, props.entry.path) } catch(e) { emit('error', e) } }
 function keydown(event: KeyboardEvent) {
@@ -33,7 +39,7 @@ function action(type: string) { emit('action', type, props.workspace.id, props.e
         <component :is="entry.isDir ? expanded ? FolderOpenIcon : FolderIcon : FileTextIcon" :class="cn('tree-icon size-4 shrink-0 text-muted-foreground', root && 'text-primary', !entry.isDir && store.active?.path === entry.path && store.active?.workspaceId === workspace.id && 'text-accent-foreground')" />
         <span class="truncate">{{ entry.name }}</span>
         <span v-if="root && !workspace.available" class="text-xs text-destructive">不可访问</span>
-      </button></TooltipTrigger><TooltipContent side="right" class="max-w-80 break-all">{{ root ? workspace.path : entry.path }}</TooltipContent></Tooltip>
+      </button></TooltipTrigger><TooltipContent side="right" class="max-w-80 break-all">{{ tooltipPath }}</TooltipContent></Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger as-child><Button variant="ghost" size="icon-xs" class="tree-menu opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" :aria-label="`${entry.name} 的菜单`"><MoreHorizontalIcon /></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="start" class="min-w-48">

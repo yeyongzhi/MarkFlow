@@ -161,6 +161,11 @@ pub fn copy_history(core:&Core,workspace:&str,old:&str,new:&str)->Result<()> {
  let mut rows=version_index(&target)?;for row in version_index(&source)? {let Some(id)=row["id"].as_str()else{continue};if uuid::Uuid::parse_str(id).is_err()||rows.iter().any(|v|v["id"]==id){continue;}fs::copy(source.join(format!("{id}.json")),target.join(format!("{id}.json")))?;rows.push(row);}
  rows.sort_by_key(|v|std::cmp::Reverse(v["createdAt"].as_u64()));write_json(&target.join("index.json"),&rows)
 }
+pub fn copy_history_between_workspaces(core:&Core,source_workspace:&str,source_path:&str,target_workspace:&str,target_path:&str)->Result<()> {
+ let source=history_dir(core,source_workspace,source_path);if !source.exists(){return Ok(());}let target=history_dir(core,target_workspace,target_path);fs::create_dir_all(&target)?;
+ let mut rows=version_index(&target)?;for row in version_index(&source)? {let Some(id)=row["id"].as_str()else{continue};if uuid::Uuid::parse_str(id).is_err()||rows.iter().any(|v|v["id"]==id){continue;}fs::copy(source.join(format!("{id}.json")),target.join(format!("{id}.json")))?;rows.push(row);}
+ rows.sort_by_key(|v|std::cmp::Reverse(v["createdAt"].as_u64()));write_json(&target.join("index.json"),&rows)
+}
 #[tauri::command]
 pub async fn valid_file_references(state:State<'_,AppState>)->Result<Value> {
  let core=state.core.lock().unwrap();let mut result=serde_json::Map::new();for key in ["recentFiles","favorites"] {let refs=core.preferences[key].as_array().cloned().unwrap_or_default();let valid:Vec<Value>=refs.into_iter().take(200).filter(|v|{

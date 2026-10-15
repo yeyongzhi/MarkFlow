@@ -28,6 +28,9 @@ struct Document { id: String, workspace_id: String, path: String, text: String, 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Entry { name: String, path: String, is_dir: bool }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportFile { name: String, text: String }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Draft { id: String, workspace_id: String, path: String, text: String, hash: String, updated_at: u64 }
@@ -238,12 +241,46 @@ async fn create_entry(state: State<'_, AppState>, workspace_id: String, parent: 
     if is_dir { fs::create_dir(&target)?; } else { fs::OpenOptions::new().write(true).create_new(true).open(&target)?.sync_all()?; }
     Ok(relative(&root, &target))
 }
+#[tauri::command]
+async fn import_documents(state: State<'_, AppState>, workspace_id: String, parent: String, files: Vec<ImportFile>) -> Result<Vec<String>> {
+    if files.is_empty() || files.len() > 500 || files.iter().map(|file| file.text.len()).sum::<usize>() > 20 * 1024 * 1024 { return Err(error("LARGE", "单次最多导入 500 个文件，总大小不超过 20MiB。")); }
+    let core = state.core.lock().unwrap(); let root = root(&core, &workspace_id)?; let directory = files::resolve(&root, &parent, true)?;
+    let mut imported = Vec::with_capacity(files.len());
+    for file in files {
+        files::validate_name(&file.name)?;
+        let extension = Path::new(&file.name).extension().and_then(|value| value.to_str()).unwrap_or("");
+        if !matches!(extension.to_ascii_lowercase().as_str(), "md" | "markdown") { return Err(error("TYPE", "只支持导入 .md 或 .markdown 文件。")); }
+        let stem = Path::new(&file.name).file_stem().and_then(|value| value.to_str()).unwrap_or("导入文档");
+        let mut index = 1u32;
+        let target = loop {
+            let name = if index == 1 { format!("{stem}.md") } else { format!("{stem}（导入 {index}）.md") };
+            files::validate_name(&name)?;
+            let candidate = directory.join(&name);
+            if !candidate.exists() { break candidate; }
+            index += 1;
+        };
+        let mut output = fs::OpenOptions::new().write(true).create_new(true).open(&target)?;
+        output.write_all(file.text.as_bytes())?; output.sync_all()?;
+        imported.push(relative(&root, &target));
+    }
+    Ok(imported)
+}
 
 fn collect_markdown(root: &Path, entry: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
     let entry = files::resolve(root, &relative(root, entry), true)?;
     if entry.is_dir() { for child in fs::read_dir(entry)? { collect_markdown(root, &child?.path(), files)?; } }
     else if entry.extension().is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("md")) { files.push(entry); }
     if files.len() > 10_000 { return Err(error("LARGE", "单次移动涉及过多文档")); } Ok(())
+}
+fn copy_entry(source: &Path, target: &Path) -> Result<()> {
+    let metadata = fs::symlink_metadata(source)?;
+    if metadata.file_type().is_symlink() { return Err(error("PATH", "跨工作区移动不支持包含符号链接的文件夹")); }
+    if metadata.is_dir() {
+        fs::create_dir(target)?;
+        for child in fs::read_dir(source)? { let child = child?; copy_entry(&child.path(), &target.join(child.file_name()))?; }
+    } else if metadata.is_file() { fs::copy(source, target)?; }
+    else { return Err(error("TYPE", "跨工作区移动只支持普通文件和文件夹")); }
+    Ok(())
 }
 fn resolve_link(root: &Path, base: &Path, link: &str) -> Result<PathBuf> {
     if link.contains("://") || link.starts_with("data:") || link.starts_with('/') || link.contains('\\') { return Err(error("SCOPE", "仅支持工作区内的相对资源")); }
@@ -316,6 +353,33 @@ async fn relocate_entry(state: State<'_, AppState>, workspace_id: String, path: 
         doc.text = file.text; doc.hash = file.hash; core.documents.insert(id, doc.clone()); updated.push(doc);
     }
     let _ = fs::remove_file(journal); Ok(json!({ "oldPath": old_path, "newPath": new_path, "documents": updated }))
+}
+#[tauri::command]
+async fn relocate_entry_between_workspaces(state: State<'_, AppState>, workspace_id: String, target_workspace_id: String, path: String, destination: String, name: Option<String>) -> Result<Value> {
+    let mut core = state.core.lock().unwrap();
+    let source_root = root(&core, &workspace_id)?; let target_root = root(&core, &target_workspace_id)?;
+    let from = files::resolve(&source_root, &path, true)?;
+    if from == source_root { return Err(error("SCOPE", "不能移动工作区根目录")); }
+    let target_name = name.unwrap_or_else(|| from.file_name().unwrap().to_string_lossy().into()); files::validate_name(&target_name)?;
+    let target = files::resolve(&target_root, &destination, true)?.join(target_name);
+    if target.exists() { return Err(error("EXISTS", "目标位置已存在同名对象")); }
+    if target.starts_with(&from) { return Err(error("PATH", "不能将文件夹移动到自身子目录")); }
+    let old_path = relative(&source_root, &from); let new_path = relative(&target_root, &target);
+    let mut markdown = vec![]; collect_markdown(&source_root, &from, &mut markdown)?;
+    safety::protect_deletion(&core, &workspace_id, &path, &from)?;
+    let moving: Vec<Document> = core.documents.values().filter(|doc| doc.workspace_id == workspace_id && (doc.path == path || doc.path.starts_with(&format!("{path}/")))).cloned().collect();
+    for doc in &moving { let suffix = &doc.path[old_path.len()..]; safety::copy_history_between_workspaces(&core, &workspace_id, &doc.path, &target_workspace_id, &format!("{new_path}{suffix}"))?; }
+    if let Err(e) = copy_entry(&from, &target) { let _ = if target.is_dir() { fs::remove_dir_all(&target) } else { fs::remove_file(&target) }; return Err(e); }
+    let removed = if from.is_dir() { fs::remove_dir_all(&from) } else { fs::remove_file(&from) };
+    if let Err(e) = removed { return Err(error("PARTIAL", format!("源位置清理失败；完整副本已保留在目标位置，请检查两处文件：{e}"))); }
+    let mut updated = vec![];
+    for mut doc in moving {
+        remove_draft(&core, &workspace_id, &doc.path);
+        doc.path = format!("{}{}", new_path, &doc.path[old_path.len()..]); doc.workspace_id = target_workspace_id.clone();
+        let file = files::read_text(&files::resolve(&target_root, &doc.path, true)?)?; doc.text = file.text; doc.hash = file.hash;
+        core.documents.insert(doc.id.clone(), doc.clone()); updated.push(doc);
+    }
+    Ok(json!({ "oldPath": old_path, "newPath": new_path, "documents": updated, "markdownCount": markdown.len() }))
 }
 #[tauri::command]
 async fn trash_entry(state: State<'_, AppState>, workspace_id: String, path: String) -> Result<()> {
@@ -531,7 +595,7 @@ pub fn run() {
             if std::env::var_os("LEXLY_DEV_HEADLESS").is_some() { if let Some(window) = app.get_webview_window("main") { window.hide()?; } }
             Ok(())
         })
-        .invoke_handler({let handler:Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>)->bool+Send+Sync>=Box::new(tauri::generate_handler![list_system_fonts,knowledge_index,privacy_status,privacy_lock,privacy_unlock,privacy_password,save_window_geometry,valid_file_references,check_release,check_signed_update,convert_document_format,list_operation_backups,restore_operation_backup,read_version,list_versions,snapshot_document,read_disk_document,choose_backup_directory,backup_workspace,list_workspace_backups,open_backup_directory,reconnect_workspace,open_local_paths,bootstrap, data_directory, open_data_directory, select_workspace, remove_workspace, list_directory, open_in_system_directory, document_metadata, open_document, check_document, close_document, save_document, write_recovery, discard_recovery, open_recovery, save_preferences, create_entry, relocate_entry, trash_entry, import_image, open_image_directory, resolve_image, resolve_markdown_link, save_temporary_document, save_document_as, search_workspace, export_file, archive_document, list_archives, restore_archive, delete_archive, tag_candidates, apply_tag_changes]); move |invoke:tauri::ipc::Invoke<tauri::Wry>| {let locked=invoke.message.webview().state::<AppState>().privacy.locked.load(std::sync::atomic::Ordering::SeqCst);if locked&&!matches!(invoke.message.command(),"privacy_status"|"privacy_unlock"|"save_window_geometry"){invoke.resolver.reject(json!({"code":"LOCKED","message":"请先解锁应用"}));return true}handler(invoke)}})
+        .invoke_handler({let handler:Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>)->bool+Send+Sync>=Box::new(tauri::generate_handler![list_system_fonts,knowledge_index,privacy_status,privacy_lock,privacy_unlock,privacy_password,save_window_geometry,valid_file_references,check_release,check_signed_update,convert_document_format,list_operation_backups,restore_operation_backup,read_version,list_versions,snapshot_document,read_disk_document,choose_backup_directory,backup_workspace,list_workspace_backups,open_backup_directory,reconnect_workspace,open_local_paths,bootstrap, data_directory, open_data_directory, select_workspace, remove_workspace, list_directory, open_in_system_directory, document_metadata, open_document, check_document, close_document, save_document, write_recovery, discard_recovery, open_recovery, save_preferences, create_entry, import_documents, relocate_entry, relocate_entry_between_workspaces, trash_entry, import_image, open_image_directory, resolve_image, resolve_markdown_link, save_temporary_document, save_document_as, search_workspace, export_file, archive_document, list_archives, restore_archive, delete_archive, tag_candidates, apply_tag_changes]); move |invoke:tauri::ipc::Invoke<tauri::Wry>| {let locked=invoke.message.webview().state::<AppState>().privacy.locked.load(std::sync::atomic::Ordering::SeqCst);if locked&&!matches!(invoke.message.command(),"privacy_status"|"privacy_unlock"|"save_window_geometry"){invoke.resolver.reject(json!({"code":"LOCKED","message":"请先解锁应用"}));return true}handler(invoke)}})
         .run(tauri::generate_context!())
         .expect("Lexly failed to start");
 }

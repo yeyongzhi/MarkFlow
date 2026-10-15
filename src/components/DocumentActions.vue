@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { StarIcon, SearchIcon, MaximizeIcon, DownloadIcon, TableIcon, SquareCodeIcon, MoreHorizontalIcon, PanelRightIcon, CodeXmlIcon, FileTextIcon, InfoIcon, FolderSearchIcon } from '@lucide/vue'
+import { StarIcon, SearchIcon, MaximizeIcon, DownloadIcon, SquareCodeIcon, MoreHorizontalIcon, PanelRightIcon, CodeXmlIcon, FileTextIcon, InfoIcon, FolderSearchIcon } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 defineProps<{ outline: boolean; focus: boolean; favorite: boolean }>()
-defineEmits<{ toc: []; knowledge: []; favorite: []; find: []; search: []; quick: []; export: []; focus: []; table: []; code: []; toggleOutline: []; copy: [format: 'markdown' | 'text']; info: []; openDirectory: [] }>()
+defineEmits<{ toc: []; knowledge: []; favorite: []; find: []; search: []; export: []; focus: []; code: []; toggleOutline: []; copy: [format: 'markdown' | 'text']; info: []; openDirectory: [] }>()
 </script>
 
 <template>
@@ -14,9 +14,7 @@ defineEmits<{ toc: []; knowledge: []; favorite: []; find: []; search: []; quick:
         <DropdownMenuItem @select="$emit('favorite')"><StarIcon :class="favorite && 'fill-current'" />{{favorite?'取消收藏':'收藏文档'}}</DropdownMenuItem>
         <DropdownMenuItem @select="$emit('find')"><SearchIcon />查找与替换 <span class="ml-auto text-muted-foreground text-xs">Ctrl/Cmd+F</span></DropdownMenuItem>
         <DropdownMenuItem @select="$emit('search')"><SearchIcon />工作区搜索</DropdownMenuItem>
-        <DropdownMenuItem @select="$emit('quick')"><FileTextIcon />快速打开文档</DropdownMenuItem>
         <DropdownMenuItem @select="$emit('focus')"><MaximizeIcon />{{ focus ? '退出专注模式' : '进入专注模式' }}</DropdownMenuItem>
-        <DropdownMenuItem @select="$emit('table')"><TableIcon />编辑表格</DropdownMenuItem>
         <DropdownMenuItem @select="$emit('toc')"><FileTextIcon/>生成文档目录</DropdownMenuItem><DropdownMenuItem @select="$emit('knowledge')"><FileTextIcon/>文档链接与标签</DropdownMenuItem><DropdownMenuItem @select="$emit('code')"><SquareCodeIcon />编辑代码块</DropdownMenuItem>
         <DropdownMenuItem @select="$emit('export')"><DownloadIcon />导出文档</DropdownMenuItem>
       </DropdownMenuGroup><DropdownMenuSeparator />

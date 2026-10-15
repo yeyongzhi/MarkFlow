@@ -52,6 +52,7 @@ function demo(command: string, a: Record<string, any>): any {
     case 'write_recovery': case 'discard_recovery': return
     case 'save_preferences': localStorage.setItem('lexly-preview-settings', JSON.stringify(a.preferences)); return
     case 'create_entry': { const path = [a.parent, a.name].filter(Boolean).join('/'); if (files.has(path) || dirs.has(path)) throw { message: '已存在同名对象' }; if (a.isDir) dirs.add(path); else files.set(path, ''); return path }
+    case 'import_documents': { const imported:string[]=[];for(const item of a.files as {name:string;text:string}[]){const stem=item.name.replace(/\.(md|markdown)$/i,'');let path=[a.parent,`${stem}.md`].filter(Boolean).join('/'),index=2;while(files.has(path)||dirs.has(path)){path=[a.parent,`${stem}（导入 ${index++}）.md`].filter(Boolean).join('/')}files.set(path,item.text);imported.push(path)}return imported }
     case 'relocate_entry': {
       const newPath = [a.destination, a.name || a.path.split('/').at(-1)].filter(Boolean).join('/'); if (files.has(newPath) || dirs.has(newPath)) throw { message: '目标已存在' }
       for (const [path, text] of [...files]) if (path === a.path || path.startsWith(`${a.path}/`)) { files.delete(path); files.set(newPath + path.slice(a.path.length), text) }
