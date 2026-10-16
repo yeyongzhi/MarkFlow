@@ -13,14 +13,14 @@ const workspace: Workspace = { id: 'demo', name: '示例工作区', path: '浏�
 const hash = (s: string) => s // In-memory demo identity; real files use SHA-256 in Rust.
 function demo(command: string, a: Record<string, any>): any {
   switch (command) {
-    case 'bootstrap': { let prefs = {}; try { prefs = JSON.parse(localStorage.getItem('lexly-preview-settings') || '{}') } catch {} return { workspaces: [workspace], preferences: prefs, drafts: [], pendingOperations: 0 } }
+    case 'bootstrap': { let prefs = {}; try { const saved = localStorage.getItem('markflow-preview-settings') ?? localStorage.getItem('lexly-preview-settings'); prefs = JSON.parse(saved || '{}'); if (saved) localStorage.setItem('markflow-preview-settings', saved) } catch {} return { workspaces: [workspace], preferences: prefs, drafts: [], pendingOperations: 0 } }
     case 'select_workspace': throw { message: '请启动桌面版，通过系统目录选择器添加真实工作区。' }
     case 'archive_document': { if (!files.has(a.path)) throw new Error('文档已不存在'); const id=crypto.randomUUID();archived.set(id,{id,originalPath:a.path,archivedAt:Date.now(),text:files.get(a.path)!});files.delete(a.path);for(const d of docs.values())if(d.path===a.path)docs.delete(d.id);return }
     case 'list_archives': return [...archived.values()].map(({text,...entry})=>entry)
     case 'restore_archive': { const entry=archived.get(a.id);if(!entry)throw new Error('归档不存在');let path=entry.originalPath,index=1;while(files.has(path))path=entry.originalPath.replace(/\.md$/i,`（恢复${index++}）.md`);files.set(path,entry.text);const parts=path.split('/').slice(0,-1);for(let i=1;i<=parts.length;i++)dirs.add(parts.slice(0,i).join('/'));archived.delete(a.id);return path }
     case 'delete_archive': if(!archived.has(a.id))throw new Error('归档不存在');archived.delete(a.id);return
-    case 'tag_candidates': return [...files].map(([path,text])=>({workspaceId:'demo',path,text,hash:hash(text)})).concat([...archived.values()].map(e=>({workspaceId:'demo',path:`.lexly-archive/${e.id}/document.md`,text:e.text,hash:hash(e.text)})))
-    case 'apply_tag_changes': { for(const c of a.changes){const entry=c.path.startsWith('.lexly-archive/')?archived.get(c.path.split('/')[1]):undefined;const text=entry?entry.text:files.get(c.path);if(text!==c.expectedHash)throw new Error('文档已变化');}const updated:DiskDocument[]=[];for(const c of a.changes){const entry=archived.get(c.path.split('/')[1]);if(c.path.startsWith('.lexly-archive/')&&entry)entry.text=c.text;else files.set(c.path,c.text);for(const d of docs.values())if(d.path===c.path){d.text=c.text;d.hash=hash(c.text);updated.push({...d})}}return updated }
+    case 'tag_candidates': return [...files].map(([path,text])=>({workspaceId:'demo',path,text,hash:hash(text)})).concat([...archived.values()].map(e=>({workspaceId:'demo',path:`.markflow-archive/${e.id}/document.md`,text:e.text,hash:hash(e.text)})))
+    case 'apply_tag_changes': { for(const c of a.changes){const entry=c.path.startsWith('.markflow-archive/')?archived.get(c.path.split('/')[1]):undefined;const text=entry?entry.text:files.get(c.path);if(text!==c.expectedHash)throw new Error('文档已变化');}const updated:DiskDocument[]=[];for(const c of a.changes){const entry=archived.get(c.path.split('/')[1]);if(c.path.startsWith('.markflow-archive/')&&entry)entry.text=c.text;else files.set(c.path,c.text);for(const d of docs.values())if(d.path===c.path){d.text=c.text;d.hash=hash(c.text);updated.push({...d})}}return updated }
     case 'open_in_system_directory': throw { message: '请在桌面版中打开真实系统目录。' }
     case 'knowledge_index': return { documents: [...files].map(([path, text]) => ({ workspaceId: workspace.id, path, text, hash: hash(text), modifiedAt: 0 })), truncated: false, errors: [] }
     case 'check_release': return { preview: true, configured: true, available: false }
@@ -50,7 +50,7 @@ function demo(command: string, a: Record<string, any>): any {
     case 'save_document': { const d = docs.get(a.documentId)!; if (hash(files.get(d.path)!) !== a.expectedHash) throw { code: 'CONFLICT', message: '文档已被修改' }; files.set(d.path, a.text); d.hash = hash(a.text); return { hash: d.hash, revision: a.revision } }
     case 'close_document': docs.delete(a.documentId); return
     case 'write_recovery': case 'discard_recovery': return
-    case 'save_preferences': localStorage.setItem('lexly-preview-settings', JSON.stringify(a.preferences)); return
+    case 'save_preferences': localStorage.setItem('markflow-preview-settings', JSON.stringify(a.preferences)); return
     case 'create_entry': { const path = [a.parent, a.name].filter(Boolean).join('/'); if (files.has(path) || dirs.has(path)) throw { message: '已存在同名对象' }; if (a.isDir) dirs.add(path); else files.set(path, ''); return path }
     case 'import_documents': { const imported:string[]=[];for(const item of a.files as {name:string;text:string}[]){const stem=item.name.replace(/\.(md|markdown)$/i,'');let path=[a.parent,`${stem}.md`].filter(Boolean).join('/'),index=2;while(files.has(path)||dirs.has(path)){path=[a.parent,`${stem}（导入 ${index++}）.md`].filter(Boolean).join('/')}files.set(path,item.text);imported.push(path)}return imported }
     case 'relocate_entry': {

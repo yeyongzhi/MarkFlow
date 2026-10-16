@@ -1,7 +1,7 @@
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 const browser=await chromium.launch({channel:'msedge',headless:true}),page=await browser.newPage({viewport:{width:1024,height:700}}),errors=[]
-page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('lexly-preview-settings',JSON.stringify({defaultView:'source'})))
+page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('markflow-preview-settings',JSON.stringify({defaultView:'source'})))
 try {
  await page.goto('http://127.0.0.1:1420');await page.getByLabel('编辑视图').getByLabel('源码编辑', { exact: true }).click();const source=page.getByRole('textbox',{name:'Markdown 源码'});await source.waitFor()
  const text='# Large document\n\n'+('长文档输入测试 paragraph contents 0123456789.\n'.repeat(22000)),start=Date.now();await source.evaluate((el,value)=>{el.focus();el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}))},text);await page.getByText('已保存',{exact:true}).waitFor();assert((await source.inputValue())===text)

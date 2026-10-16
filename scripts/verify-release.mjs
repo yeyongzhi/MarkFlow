@@ -9,7 +9,7 @@ await mkdir('artifacts', { recursive:true })
 const data = resolve('artifacts/release-data')
 await rm(data, { recursive:true, force:true })
 await mkdir(data, { recursive:true })
-const child = spawn(resolve('src-tauri/target/release/markflow.exe'), [], { windowsHide:true, env:{...process.env,LEXLY_DATA_DIR:data,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:'--remote-debugging-port=9224'}, stdio:'ignore' })
+const child = spawn(resolve('src-tauri/target/release/markflow.exe'), [], { windowsHide:true, env:{...process.env,MARKFLOW_DATA_DIR:data,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:'--remote-debugging-port=9224'}, stdio:'ignore' })
 let browser, page
 try {
   let ready = false
@@ -37,11 +37,11 @@ try {
     await page.locator('.vditor-ir [contenteditable=true]').waitFor()
     await expect(page.locator('.vditor-ir h1')).toContainText('离线桌面编辑器')
     assert.equal(await page.locator('.outline-panel nav button').count(),2)
-    await page.screenshot({path:'artifacts/lexly-release.png'})
+    await page.screenshot({path:'artifacts/markflow-release.png'})
     // Clear only the injected in-memory document; never touch existing user sessions.
     await page.evaluate(()=>{const s=document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('workbench');s.documents=[];s.activeId=''})
   }
   assert.deepEqual(errors,[]); assert.deepEqual(remote,[])
   console.log('Release verified: embedded frontend, native IPC, offline editor scripts, outline and self-contained data directory:', dataDir)
-} catch(e) { if(page)await page.screenshot({path:'artifacts/lexly-release-failure.png'}).catch(()=>{});throw e }
+} catch(e) { if(page)await page.screenshot({path:'artifacts/markflow-release-failure.png'}).catch(()=>{});throw e }
 finally { if(browser)await browser.close().catch(()=>{});child.kill() }

@@ -37,7 +37,7 @@ async function installUpdate() {
   if (!update || installing.value) return
   installing.value = true; error.value = ''; let downloaded = 0, total = 0
   try {
-    await installProtectedUpdate(update, store, () => window.dispatchEvent(new CustomEvent('lexly-sync-editors')), event => {
+    await installProtectedUpdate(update, store, () => window.dispatchEvent(new CustomEvent('markflow-sync-editors')), event => {
       if (event.event === 'Started') total = event.data.contentLength || 0
       if (event.event === 'Progress') downloaded += event.data.chunkLength
       progress.value = total ? `正在下载 ${Math.min(100, Math.round(downloaded / total * 100))}%` : `已下载 ${(downloaded / 1048576).toFixed(1)} MiB`
@@ -47,7 +47,7 @@ async function installUpdate() {
   finally { installing.value = false; if (disposed) await update?.close() }
 }
 async function restart() {
-  try { window.dispatchEvent(new CustomEvent('lexly-sync-editors')); if (!await store.flush() || !await store.protectDrafts()) throw new Error('请先处理未保存文档'); await store.persistNow(); await relaunch() }
+  try { window.dispatchEvent(new CustomEvent('markflow-sync-editors')); if (!await store.flush() || !await store.protectDrafts()) throw new Error('请先处理未保存文档'); await store.persistNow(); await relaunch() }
   catch (e) { toast.error(message(e)) }
 }
 </script>

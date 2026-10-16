@@ -14,7 +14,7 @@
 | `verify-ui.mjs` | 通过 | 四视图与原文保留、GFM、标准语法样例、安全 HTML、大纲、主题字号、独立标签、新建 / 重命名 / 移动 / 删除确认、即时编辑 |
 | `verify-native.mjs` | 通过 | 真实工作区 / 文件写入、BOM / CRLF、外部冲突与确认中再次修改、备份覆盖、粘贴图片落盘、IR 相对路径保留、移动修正、Windows 回收站、外部删除与草稿恢复 |
 | `pnpm tauri build --bundles nsis` | 通过 | 优化正式 exe、当前用户（免管理员）中文 / 英文 NSIS 安装包，向导可选安装目录；`installer-hooks.nsh` 注入成功，卸载勾选“删除应用数据”时同步清除 `<安装目录>\data` |
-| `verify-release.mjs` | 通过 | `http://tauri.localhost/` 内嵌页面、真实 IPC、打包后的 Vditor 脚本与标题大纲；未请求 CDN / 外部资源。另确认 release 构建接受 `LEXLY_DATA_DIR`，`data_directory` 返回该目录，WebView2 的 `EBWebView` 落在其 `webview\` 子目录内 |
+| `verify-release.mjs` | 通过 | `http://tauri.localhost/` 内嵌页面、真实 IPC、打包后的 Vditor 脚本与标题大纲；未请求 CDN / 外部资源。另确认 release 构建接受 `MARKFLOW_DATA_DIR`，`data_directory` 返回该目录，WebView2 的 `EBWebView` 落在其 `webview\` 子目录内 |
 | `verify-sidebar.mjs` | 通过 | 侧栏最近 / 收藏、定位、滚动与删除不伤正文；新增 设置 → 保存与备份 中“数据目录”行显示隔离目录路径并提供打开按钮 |
 
 构建后的程序使用内嵌前端，不访问 Vite 开发端口。正式版冒烟测试仅注入短暂的前端内存文档，不进行磁盘正文写入，数据落在 `artifacts/release-data/`。原生文件测试均使用 `artifacts/*` 隔离目录与 debug-only 数据路径。真实安装与卸载（写入 `%LOCALAPPDATA%` 之外的程序目录、开始菜单与注册表）未在验证机上执行，属发布前人工验收项。
@@ -25,10 +25,10 @@
 | --- | --- |
 | Windows x64 程序 | `src-tauri/target/release/markflow.exe` |
 | Windows x64 安装包 | `src-tauri/target/release/bundle/nsis/MarkFlow_0.1.0_x64-setup.exe`，约 10.84 MiB（2026-10-04 重新构建） |
-| 所见即所得截图 | `artifacts/lexly-live.png` |
-| 分屏截图 | `artifacts/lexly-split.png` |
-| 暗色截图 | `artifacts/lexly-dark.png` |
-| 正式版独立运行截图 | `artifacts/lexly-release.png` |
+| 所见即所得截图 | `artifacts/markflow-live.png` |
+| 分屏截图 | `artifacts/markflow-split.png` |
+| 暗色截图 | `artifacts/markflow-dark.png` |
+| 正式版独立运行截图 | `artifacts/markflow-release.png` |
 
 安装包已生成，尚未执行安装 / 卸载验收；当前无代码签名。macOS 已有配置、图标及两种架构的构建工作流，尚无实际构建与真机结果。
 

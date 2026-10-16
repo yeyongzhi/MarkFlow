@@ -12,9 +12,9 @@ async function prepared(d: Document) {
   for(const code of element.querySelectorAll('pre[data-rendered="true"] code.language-mermaid'))code.parentElement?.remove();
   const assets = new Map<string, string>(); let total = 0
   for (const img of element.querySelectorAll<HTMLImageElement>('img')) {
-    const url = img.dataset.lexlyUrl || ''; let data = assets.get(url)
+    const url = img.dataset.markflowUrl || ''; let data = assets.get(url)
     if (!data) { data = await call<string>('resolve_image', { documentId: d.id, url }); if (!data) throw new Error(`图片无法导出：${url}`); total += data.length; if (total > 90 * 1024 * 1024) throw new Error('图片总量过大，请减少图片后导出。'); assets.set(url, data) }
-    img.src = data; img.removeAttribute('loading'); delete img.dataset.lexlyUrl
+    img.src = data; img.removeAttribute('loading'); delete img.dataset.markflowUrl
   }
   for(const svg of element.querySelectorAll<SVGSVGElement>('.mermaid-diagram svg')){const view=svg.viewBox.baseVal;svg.setAttribute('width',String(view.width||800));svg.setAttribute('height',String(view.height||400));const img=document.createElement('img');img.alt='Mermaid 图表';img.src='data:image/svg+xml;base64,'+base64(new TextEncoder().encode(new XMLSerializer().serializeToString(svg)));svg.replaceWith(img)}
   return { element, assets }

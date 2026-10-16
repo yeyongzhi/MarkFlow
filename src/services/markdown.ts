@@ -11,10 +11,10 @@ markdown.renderer.rules.heading_open = (tokens, index, _options, env, self) => {
 for(const kind of ['th_open','td_open'])markdown.renderer.rules[kind]=(tokens,index,options,_env,self)=>{const token=tokens[index]!,style=String(token.attrGet('style')||''),align=/text-align:(left|center|right)/.exec(style)?.[1];if(align)token.attrSet('align',align);return self.renderToken(tokens,index,options)}
 markdown.renderer.rules.image = (tokens, index) => {
   const token = tokens[index]!, url = String(token.attrGet('src') || ''), alt = token.children?.map(t => t.content).join('') || token.content
-  return `<img data-lexly-url="${markdown.utils.escapeHtml(url)}" alt="${markdown.utils.escapeHtml(alt)}" loading="lazy">`
+  return `<img data-markflow-url="${markdown.utils.escapeHtml(url)}" alt="${markdown.utils.escapeHtml(alt)}" loading="lazy">`
 }
 DOMPurify.addHook('afterSanitizeAttributes', node => {
-  if (node.tagName === 'IMG') { const src = node.getAttribute('src'); if (src) node.setAttribute('data-lexly-url', src); node.removeAttribute('src') }
+  if (node.tagName === 'IMG') { const src = node.getAttribute('src'); if (src) node.setAttribute('data-markflow-url', src); node.removeAttribute('src') }
   if (node.tagName === 'A') { node.removeAttribute('target'); node.removeAttribute('download') }
   if (node.tagName === 'INPUT') { if (node.getAttribute('type') !== 'checkbox') node.remove(); else node.setAttribute('disabled', '') }
 })

@@ -12,7 +12,7 @@ await writeFile(resolve(data, 'workspaces.json'), JSON.stringify([{ id: 'design'
 await writeFile(resolve(data, 'preferences.json'), JSON.stringify({ defaultView: 'source', mode: 'light', autoSave: false }))
 await writeFile(resolve(root,'test.md'),'13231\n3123');await writeFile(resolve(root,'notes.md'),'header\ntest in body');await mkdir(resolve(root,'folder-test'));await writeFile(resolve(root,'folder-test/other.md'),'numbers only')
 await writeFile(resolve(data,'preferences.json'),JSON.stringify({defaultView:'live',autoSave:false,saveOnBlur:false}))
-const child = spawn(resolve('src-tauri/target/debug/markflow.exe'), [], { windowsHide: true, env: { ...process.env, LEXLY_DEV_DATA_DIR: data, WEBVIEW2_USER_DATA_FOLDER: resolve(data, 'webview'), LEXLY_DEV_HEADLESS: '1', WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9242' }, stdio: ['ignore','pipe','pipe'] })
+const child = spawn(resolve('src-tauri/target/debug/markflow.exe'), [], { windowsHide: true, env: { ...process.env, MARKFLOW_DEV_DATA_DIR: data, WEBVIEW2_USER_DATA_FOLDER: resolve(data, 'webview'), MARKFLOW_DEV_HEADLESS: '1', WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9242' }, stdio: ['ignore','pipe','pipe'] })
 let browser, page, logs = ''
 child.stderr.on('data', b => { logs += b }); child.stdout.on('data', b => { logs += b })
 try {

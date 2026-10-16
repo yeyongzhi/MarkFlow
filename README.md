@@ -119,7 +119,7 @@ node scripts/verify-release.mjs
 
 ## 文件与保存规则
 
-正文只通过 Rust 文件服务读写；设置项、标签注册表、最近与收藏列表、恢复草稿、历史版本和工作区注册表存放在数据目录，设置为纯 JSON 文件，可在 设置 → 安全 → 数据目录 查看路径并直接打开。Windows 安装包版把数据目录放在程序同级的 `data\`（例如 `D:\Program\MarkFlow\data\`，WebView2 缓存一并放在 `data\webview\`）；该目录不可写、或 macOS 构建时，回退到 `%LOCALAPPDATA%\com.lexly.editor\` / `~/Library/Application Support/com.lexly.editor/`。首次在新位置启动会把旧目录的配置、草稿、历史和备份复制过去，原目录保持不动，复制结果记录在 `data\migration.json`。调试与自动化检查用 `LEXLY_DATA_DIR`（或 debug 专用的 `LEXLY_DEV_DATA_DIR`）指定数据目录。
+正文只通过 Rust 文件服务读写；设置项、标签注册表、最近与收藏列表、恢复草稿、历史版本和工作区注册表存放在数据目录，设置为纯 JSON 文件，可在 设置 → 数据与安全 → 数据目录 查看路径并直接打开。Windows 安装包版把数据目录放在程序同级的 `data\`（例如 `D:\Program\MarkFlow\data\`，WebView2 缓存一并放在 `data\webview\`）；该目录不可写、或 macOS 构建时，回退到早期版本使用的应用数据目录。首次在新位置启动会把旧目录的配置、草稿、历史和备份复制过去，原目录保持不动，复制结果记录在 `data\migration.json`。调试与自动化检查用 `MARKFLOW_DATA_DIR`（或 debug 专用的 `MARKFLOW_DEV_DATA_DIR`）指定数据目录；旧版 `LEXLY_*` 环境变量仍作为兼容别名接受。
 
 停止输入约 500ms 后保存，持续输入时约 2s 提交一次。保存按文档排队，使用 SHA-256 检查磁盘版本，经同目录临时文件替换原文件。原文件的 UTF-8 BOM 和 CRLF/LF 风格会保留。外部改写或删除时暂停自动保存并保留编辑缓冲。
 
@@ -155,6 +155,6 @@ docs/                       产品需求、实现架构、验证记录
 
 源码位于 `website/`。运行 `pnpm docs:dev` 本地查看，`pnpm docs:build` 生成静态站点。main 分支通过 GitHub Actions 部署 Pages，dev 和 PR 只验证构建。仓库 Settings → Pages 的 Source 需选择 GitHub Actions。
 
-产品名称已改为 MarkFlow。内部应用标识 `com.lexly.editor` 和既有数据键保留，以兼容早期配置和历史记录。
+产品名称已改为 MarkFlow。内部应用标识和既有数据键保留，以兼容早期配置和历史记录。
 
 更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。

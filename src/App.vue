@@ -17,6 +17,7 @@ import { SearchIcon, BookOpenIcon, PlusIcon, FolderPlusIcon, FilePlusIcon, XIcon
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
+import BrandMark from '@/components/BrandMark.vue'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty'
@@ -64,7 +65,7 @@ import type { AppCommand } from '@/types/commands'
 
 const codeBlockIndex=ref<number>(),tocOpen=ref(false),tabsOpen=ref(false)
 const store = useWorkbench(), settings = ref(false), recovery = ref(false), busy = ref(false), bootError = ref(''), systemDark = ref(matchMedia('(prefers-color-scheme: dark)').matches)
-const refreshing = ref(false), adding = ref(false)
+const refreshing = ref(false), appReloading = ref(false), adding = ref(false)
 const archivesOpen = ref(false), importOpen=ref(false), safetyOpen=ref(false), safetyKind=ref<'history'|'conflict'|'backups'|'format'>('history'), libraryOpen=ref(false), libraryFavorites=ref(false), templateId=ref('blank'), cleanupOpen=ref(false), cleanupText=ref(''), cleanupBefore=ref(''), draggedTab=ref(''), toolbarHost=ref<HTMLElement>(), toolbarActions=ref<HTMLElement>(), toolbarWidth=ref(0), toolbarActionsWidth=ref(300)
 function showSafety(kind:'history'|'conflict'|'backups'|'format'){syncEditors();safetyKind.value=kind;safetyOpen.value=true}
 function showLibrary(favorites=false){libraryFavorites.value=favorites;libraryOpen.value=true}
@@ -126,8 +127,8 @@ const currentFilePath = computed(() => { const d = store.active, w = workspace.v
 const statusLabels = { clean: '已保存', dirty: '待保存', saving: '保存中…', error: '保存失败', conflict: '外部修改冲突', missing: '文件已不存在' }
 const panes = new Map<string, InstanceType<typeof EditorPane>>()
 async function manualSave(d: Document) { try { if(await (d.temporary?store.saveAs(d):store.save(d)))toast.success('文档已保存');else toast.error('保存未完成，请处理冲突或错误'); }catch(e){toast.error(message(e))} }
-window.addEventListener('lexly-sync-editors',syncEditors)
-onBeforeUnmount(()=>window.removeEventListener('lexly-sync-editors',syncEditors))
+window.addEventListener('markflow-sync-editors',syncEditors)
+onBeforeUnmount(()=>window.removeEventListener('markflow-sync-editors',syncEditors))
 const fileDialog = ref<{ type: string; workspaceId: string; targetWorkspaceId: string; path: string; isDir: boolean; name: string; destination: string } | null>(null)
 const confirmation = ref<{ title: string; description: string; label: string; danger?: boolean; action: () => Promise<unknown> } | null>(null)
 const media = matchMedia('(prefers-color-scheme: dark)'), disposers: UnlistenFn[] = []
@@ -166,6 +167,17 @@ async function refreshWorkspaces() {
   if (refreshing.value) return; refreshing.value = true
   try { const failures = await store.refresh(); if (failures) toast.warning('工作区已刷新，部分目录无法访问', { description: `${failures} 个目录读取失败，请检查路径或权限。` }); else toast.success('工作区刷新成功') }
   catch(e) { report(e) } finally { refreshing.value = false }
+}
+async function refreshApplication() {
+  if (appReloading.value) return
+  appReloading.value = true
+  try {
+    syncEditors()
+    if (store.documents.some(document => document.temporary)) throw new Error('请先另存临时文档，再刷新应用。')
+    if (!await store.flush() || !await store.protectDrafts()) throw new Error('有文档尚未保存，请处理保存错误或冲突后重试。')
+    await store.persistNow()
+    window.location.reload()
+  } catch (e) { appReloading.value = false; report(e) }
 }
 function syncEditors() { for (const pane of panes.values()) pane.sync() }
 async function copyArticle(format: 'markdown' | 'text') {
@@ -210,6 +222,12 @@ async function submitFile() {
   catch(e) { report(e) } finally { busy.value = false }
 }
 function confirmReload(d: Document) { confirmation.value = { title: '重新加载磁盘版本？', description: '当前未保存修改会被放弃。可以先另存副本来保留这份内容。', label: '重新加载', action: () => store.reload(d) } }
+function refreshDocument(d: Document) {
+  panes.get(d.id)?.sync()
+  if (d.temporary) { toast.info('临时文档尚未保存到磁盘，不能重新加载。'); return }
+  if (d.revision > d.savedRevision || d.status !== 'clean') { confirmReload(d); return }
+  void safely(async () => { await store.reload(d); toast.success('文档已从磁盘重新加载') })
+}
 async function confirmOverwrite(d: Document) { try { panes.get(d.id)?.sync(); const hash = await call<string>('check_document', { documentId: d.id }); confirmation.value = { title: '用当前内容覆盖磁盘版本？', description: '磁盘版本会先保存到本机冲突备份，再写入当前编辑内容。确认期间磁盘若再次变化，本次覆盖会中止。', label: '备份并覆盖', action: () => store.overwrite(d, hash) } } catch(e) { report(e) } }
 async function submitConfirmation() { if (!confirmation.value || busy.value) return; busy.value = true; const item = confirmation.value; try { await item.action(); if (confirmation.value === item) confirmation.value = null } catch(e) { report(e) } finally { busy.value = false } }
 function newFile() { templateId.value='blank'; const ws = workspace.value || store.workspaces[0]; if (ws) action('file', ws.id, store.active?.workspaceId === ws.id ? store.active.path.split('/').slice(0,-1).join('/') : '', true); else void addWorkspace() }
@@ -348,10 +366,10 @@ onBeforeUnmount(() => { toolbarObserver?.disconnect();clearInterval(backupTick);
   <div class="workbench flex h-full flex-col bg-muted/40" :class="{ 'focus-mode': focusMode }" :style="{ '--collapsed-sidebar-width': store.preferences.collapsedSidebarWidth + 'px' }">
     <header v-if="desktop || (store.preferences.header && !focusMode)" data-tauri-drag-region class="app-header relative flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 border-b border-border/50 pl-3" @dblclick.self="desktop && getCurrentWindow().toggleMaximize()" @pointerdown.capture="bookmarkEditor">
       <time data-tauri-drag-region class="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 tabular-nums text-xs text-muted-foreground min-[900px]:block" aria-label="当前时间">{{ currentTime }}</time>
-      <div data-tauri-drag-region class="flex h-full min-w-0 flex-1 items-center gap-3"><div data-tauri-drag-region class="brand flex shrink-0 items-center"><svg aria-hidden="true" viewBox="0 0 256 256" class="size-7 rounded-lg bg-primary text-primary-foreground"><path d="M74 56h75l33 34v110H74z" fill="currentColor"/><path d="M149 56v34h33" fill="var(--primary)" opacity="0.3"/><path d="M96 120h64M96 144h64M96 168h40" stroke="var(--primary)" stroke-width="10" stroke-linecap="round"/></svg></div><AppMenubar v-if="store.preferences.header && !focusMode" :commands="commands" @execute="executeCommand" /></div>
+      <div data-tauri-drag-region class="flex h-full min-w-0 flex-1 items-center gap-3"><div data-tauri-drag-region class="brand flex shrink-0 items-center"><BrandMark aria-hidden="true" class="size-7 rounded-lg" /></div><AppMenubar v-if="store.preferences.header && !focusMode" :commands="commands" @execute="executeCommand" /></div>
       <div class="flex h-full shrink-0 items-center gap-1">
         <Badge v-if="!desktop" variant="secondary" class="hidden xl:inline-flex">浏览器预览 · 示例数据</Badge>
-        <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon" aria-label="全局搜索文档" @click="openSearch(true)"><SearchIcon/></Button></TooltipTrigger><TooltipContent>搜索标题、内容或标签 · Ctrl/Cmd+Shift+F</TooltipContent></Tooltip><Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon" aria-label="工作区知识" @click="knowledgeTab='backlinks';knowledgeOpen=true"><NetworkIcon/></Button></TooltipTrigger><TooltipContent>工作区知识与标签筛选</TooltipContent></Tooltip>
+        <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon" aria-label="刷新应用" :disabled="appReloading" @click="refreshApplication"><RefreshCwIcon :class="cn(appReloading && 'animate-spin')" /></Button></TooltipTrigger><TooltipContent>刷新应用</TooltipContent></Tooltip><Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon" aria-label="全局搜索文档" @click="openSearch(true)"><SearchIcon/></Button></TooltipTrigger><TooltipContent>搜索标题、内容或标签 · Ctrl/Cmd+Shift+F</TooltipContent></Tooltip>
 <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon" aria-label="锁定应用" @click="lockApp"><LockKeyholeIcon/></Button></TooltipTrigger><TooltipContent>锁定应用</TooltipContent></Tooltip>
 <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon" aria-label="搜索命令" @click="commandOpen = true"><CommandIcon /></Button></TooltipTrigger><TooltipContent>搜索命令 · Ctrl/Cmd+K</TooltipContent></Tooltip>
         <WindowControls v-if="desktop" class="ml-2" @close="requestClose" />
@@ -386,6 +404,8 @@ onBeforeUnmount(() => { toolbarObserver?.disconnect();clearInterval(backupTick);
             </div>
             <div ref="toolbarActions" class="flex shrink-0 items-center gap-1.5">
               <ToggleGroup type="single" variant="segmented" :spacing="1" size="sm" :model-value="store.active.view" aria-label="编辑视图" @update:model-value="v => { if (v) changeView(String(v)) }"><ToggleGroupItem v-for="view in views" :key="view.value" :value="view.value" :aria-label="view.label"><component :is="viewIcons[view.value]" data-icon="inline-start" /><span :class="cn(store.active.view !== view.value && 'hidden 2xl:inline')">{{ view.label }}</span></ToggleGroupItem></ToggleGroup>
+              <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon-sm" aria-label="重新加载文档" title="重新加载文档" @click="refreshDocument(store.active!)"><RefreshCwIcon /></Button></TooltipTrigger><TooltipContent>从磁盘重新打开文档</TooltipContent></Tooltip>
+              <Tooltip><TooltipTrigger as-child><Button variant="ghost" size="icon-sm" aria-label="工作区知识" title="工作区知识" @click="knowledgeTab='backlinks';knowledgeOpen=true"><NetworkIcon /></Button></TooltipTrigger><TooltipContent>工作区知识与标签筛选</TooltipContent></Tooltip>
               <DocumentActions @toc="syncEditors();tocOpen=true" @knowledge="knowledgeTab='backlinks';knowledgeOpen=true" :favorite="isFavorite(store.active!)" @favorite="store.favorite(store.active!)" :focus="focusMode" @find="syncEditors(); findOpen = true" @search="openSearch(true)" @export="openExport()" @focus="focusMode = !focusMode" @code="openStructure('code')" :outline="store.preferences.outline" @toggle-outline="store.preferences.outline = !store.preferences.outline" @copy="copyArticle" @info="showDocumentInfo" @open-directory="action('open-system', store.active.workspaceId, store.active.path, false)" />
             </div>
           </div>

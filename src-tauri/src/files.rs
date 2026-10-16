@@ -64,7 +64,7 @@ pub fn encode(text: &str, bom: bool, crlf: bool) -> Vec<u8> {
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     let parent = path.parent().ok_or_else(|| error("IO", "无效目标目录"))?;
     if let Ok(meta) = fs::metadata(path) { if meta.permissions().readonly() { return Err(error("PERMISSION", "文件为只读，无法保存")); } }
-    let mut temp = tempfile::Builder::new().prefix(".lexly-").tempfile_in(parent)?;
+    let mut temp = tempfile::Builder::new().prefix(".markflow-").tempfile_in(parent)?;
     temp.write_all(bytes)?;
     if let Ok(meta) = fs::metadata(path) { temp.as_file().set_permissions(meta.permissions())?; }
     temp.as_file().sync_all()?;

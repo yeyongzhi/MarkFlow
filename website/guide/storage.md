@@ -15,9 +15,9 @@ Windows 正式版默认将应用数据放在程序旁的 `data` 文件夹。例�
 | 工作区备份 | 默认 `data\workspace-backups`，可另外选择备份目录 |
 | WebView2 缓存 | `data\webview` |
 
-安装目录不可写时回退到 `%LOCALAPPDATA%\com.lexly.editor`。这个标识为了兼容早期数据而保留，产品名称已改为 MarkFlow。开发版通常也使用 AppData；macOS 使用对应的 Application Support。
+安装目录不可写时回退到 `com.markflow.editor` 对应的 AppData 目录。首次启动会把旧 `com.lexly.editor` 目录中的设置、草稿、历史和备份复制到新目录，原目录保留。开发版通常也使用 AppData；macOS 使用对应的 Application Support。
 
-以设置 → 保存与备份 → 数据目录显示的实际位置为准。系统组件和安装器临时文件仍可能使用系统盘。
+以设置 → 数据与安全 → 数据目录显示的实际位置为准。系统组件和安装器临时文件仍可能使用系统盘。
 
 ## 备份与搬迁
 

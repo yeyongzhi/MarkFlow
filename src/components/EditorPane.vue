@@ -68,13 +68,13 @@ async function copyImagePath() { try { if (selectedImage.value) { await navigato
 async function imageDirectory() { try { if (selectedImage.value) await call('open_image_directory', { documentId: props.document.id, url: selectedImage.value.url }) } catch(e) { toast.error(message(e)) } }
 function selectImage(img: HTMLImageElement) {
   syncLive()
-  const url = img.dataset.lexlyUrl || reverseImages.get(img.src) || img.getAttribute('src') || ''
+  const url = img.dataset.markflowUrl || reverseImages.get(img.src) || img.getAttribute('src') || ''
   const container = preview.value?.contains(img) ? preview.value : live.value
-  const peers = Array.from(container?.querySelectorAll<HTMLImageElement>('img') || []).filter(el => (el.dataset.lexlyUrl || reverseImages.get(el.src) || el.getAttribute('src')) === url)
+  const peers = Array.from(container?.querySelectorAll<HTMLImageElement>('img') || []).filter(el => (el.dataset.markflowUrl || reverseImages.get(el.src) || el.getAttribute('src')) === url)
   const references = imageReferences(props.document.text).filter(ref => ref.url === url)
   const reference = peers.length === references.length ? references[peers.indexOf(img)] : undefined
   imageTarget = reference ? { reference, snapshot: props.document.text } : undefined
-  selectedImage.value = { url, alt: reference?.alt || img.alt, src: img.src, unavailable: img.dataset.lexlyUnavailable === 'true' || !img.getAttribute('src'), editable: !!reference }
+  selectedImage.value = { url, alt: reference?.alt || img.alt, src: img.src, unavailable: img.dataset.markflowUnavailable === 'true' || !img.getAttribute('src'), editable: !!reference }
 }
 async function imageDoubleClick(event: MouseEvent) { const img = (event.target as HTMLElement).closest('img'); if (!img) return; event.preventDefault(); event.stopPropagation(); selectImage(img); await nextTick(); imageTools.value?.openPreview() }
 watch(() => [props.document.view, props.active, props.document.generation], clearImage)
@@ -162,7 +162,7 @@ function restoreBookmark() {
 function placeToolbar() {
   const target = document.getElementById(`format-${props.document.id}`)
   const toolbar = externalToolbar || live.value?.querySelector<HTMLElement>('.vditor-toolbar')
-  if (target && toolbar) { toolbar.classList.add('lexly-format-toolbar'); target.appendChild(toolbar); externalToolbar = toolbar;configureToolbar() }
+  if (target && toolbar) { toolbar.classList.add('markflow-format-toolbar'); target.appendChild(toolbar); externalToolbar = toolbar;configureToolbar() }
 }
 function configureToolbar(){if(!externalToolbar)return;const ids=[...store.preferences.toolbarOrder,...toolbarItems.map(i=>i.id)].filter((id,i,a)=>a.indexOf(id)===i);for(const id of ids){const button=externalToolbar.querySelector<HTMLButtonElement>(`button[data-type="${id}"]`);const item=button?.closest<HTMLElement>('.vditor-toolbar__item');if(item){item.hidden=store.preferences.toolbarHidden.includes(id);externalToolbar.appendChild(item)}if(id==='table'&&button){button.title='';button.setAttribute('aria-label','插入表格')}}externalToolbar.querySelectorAll('.vditor-toolbar__divider').forEach(d=>d.remove())
 }
@@ -275,36 +275,36 @@ function destroyLive() {
 function canonical(value: string) { for (const [data, url] of reverseImages) value = value.replaceAll(data, url); return value }
 function hydrateImage(img: HTMLImageElement, data: string, url: string) {
   // Distinguish equal image bytes referenced by different Markdown paths.
-  const resolved = `${data}#lexly-${encodeURIComponent(url)}`
-  reverseImages.set(resolved, url); img.dataset.lexlyUnavailable = 'false'; img.removeAttribute('title'); img.src = resolved
+  const resolved = `${data}#markflow-${encodeURIComponent(url)}`
+  reverseImages.set(resolved, url); img.dataset.markflowUnavailable = 'false'; img.removeAttribute('title'); img.src = resolved
 }
 function unavailableImage(img: HTMLImageElement, url: string, title: string) {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="88"><rect width="400" height="88" rx="6" fill="#eeeeee"/><text x="18" y="36" fill="#555555" font-size="16">图片无法显示</text><text x="18" y="64" fill="#555555" font-size="13">点击图片查看路径或重新选择图片</text></svg>'
   hydrateImage(img, 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))), url)
-  img.dataset.lexlyUnavailable = 'true'; img.setAttribute('aria-label', `${title}\n${url}`)
+  img.dataset.markflowUnavailable = 'true'; img.setAttribute('aria-label', `${title}\n${url}`)
 }
 function imageError(event: Event) {
   const img = event.target
-  if (!(img instanceof HTMLImageElement) || img.dataset.lexlyUnavailable === 'true') return
+  if (!(img instanceof HTMLImageElement) || img.dataset.markflowUnavailable === 'true') return
   const container = preview.value?.contains(img) ? preview.value : live.value?.contains(img) ? live.value : undefined
-  if (container && img.dataset.lexlyUrl) unavailableImage(img, img.dataset.lexlyUrl, '图片无法解码，请重新选择图片。')
+  if (container && img.dataset.markflowUrl) unavailableImage(img, img.dataset.markflowUrl, '图片无法解码，请重新选择图片。')
 }
 async function decorateImages(container?: HTMLElement) {
   if (!container || !props.active) return
   for (const img of container.querySelectorAll<HTMLImageElement>('img')) {
-    let url = img.dataset.lexlyUrl || img.getAttribute('src') || ''
+    let url = img.dataset.markflowUrl || img.getAttribute('src') || ''
     const existing = img.getAttribute('src') || ''
     if (existing.startsWith('data:') && reverseImages.has(existing)) continue
     if (url.startsWith('data:') && reverseImages.has(url)) continue
-    if (!url || img.dataset.lexlyLoading === 'true') continue
+    if (!url || img.dataset.markflowLoading === 'true') continue
     const viewport = container.getBoundingClientRect(), bounds = img.getBoundingClientRect()
     if (bounds.top > viewport.bottom + 300 || bounds.bottom < viewport.top - 300) continue
-    img.dataset.lexlyUrl = url
+    img.dataset.markflowUrl = url
     if (/^(https?:|\/\/|data:|file:)/i.test(url)) { unavailableImage(img, url, '远程或内嵌图片默认不加载，请使用本地附件。'); continue }
-    img.dataset.lexlyLoading = 'true'
+    img.dataset.markflowLoading = 'true'
     try { let data = imageCache.get(url); if (!data) { data = await call<string>('resolve_image', { documentId: props.document.id, url }); if (!data) throw new Error('图片不存在'); if (data.length <= 8 * 1024 * 1024) { if (imageCache.size >= 12) imageCache.delete(imageCache.keys().next().value!); imageCache.set(url, data) } }; if (data && img.isConnected && props.active) hydrateImage(img, data, url) }
     catch { unavailableImage(img, url, `无法访问图片：${url}`) }
-    finally { delete img.dataset.lexlyLoading }
+    finally { delete img.dataset.markflowLoading }
   }
 }
 function syncLive() {
@@ -409,7 +409,7 @@ async function jump(heading: Heading) {
   if (props.document.view === 'live') { live.value?.querySelectorAll('h1,h2,h3,h4,h5,h6')[heading.index]?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   else {const el=preview.value?.querySelector<HTMLElement>(`#${heading.id}`);for(let parent=el?.parentElement;parent;parent=parent.parentElement)if(parent instanceof HTMLDetailsElement)parent.open=true;el?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
 }
-onMounted(() => {window.addEventListener('lexly-heading',headingEvent); void initLive(); document.addEventListener('selectionchange', selection); lineResize = new ResizeObserver(queueLineNumbers); if (host.value) lineResize.observe(host.value); queueLineNumbers() }); onBeforeUnmount(() => {window.removeEventListener('lexly-heading',headingEvent); disposed = true; document.removeEventListener('selectionchange', selection); clearTimeout(renderTimer); clearTimeout(idleTimer); cancelAnimationFrame(scrollFrame); cancelAnimationFrame(lineFrame); lineResize?.disconnect(); observer?.disconnect(); clearTimeout(imageTimer); destroyLive() })
+onMounted(() => {window.addEventListener('markflow-heading',headingEvent); void initLive(); document.addEventListener('selectionchange', selection); lineResize = new ResizeObserver(queueLineNumbers); if (host.value) lineResize.observe(host.value); queueLineNumbers() }); onBeforeUnmount(() => {window.removeEventListener('markflow-heading',headingEvent); disposed = true; document.removeEventListener('selectionchange', selection); clearTimeout(renderTimer); clearTimeout(idleTimer); cancelAnimationFrame(scrollFrame); cancelAnimationFrame(lineFrame); lineResize?.disconnect(); observer?.disconnect(); clearTimeout(imageTimer); destroyLive() })
 defineExpose({ jump, jumpLine, selectRange, sync: syncLive, pickImage, bookmark, format, moveBlock })
 </script>
 <template>

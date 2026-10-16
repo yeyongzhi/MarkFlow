@@ -52,8 +52,8 @@ fn draft_path(core: &Core, workspace: &str, path: &str) -> PathBuf { core.data.j
 fn remove_draft(core: &Core, workspace: &str, path: &str) { let _ = fs::remove_file(draft_path(core, workspace, path)); }
 fn persist_workspaces(core: &Core) -> Result<()> { write_json(&core.data.join("workspaces.json"), &core.workspaces.iter().filter(|w|!w.id.starts_with("file-")).collect::<Vec<_>>()) }
 fn sidecar_data_dir() -> Option<PathBuf> {
-    // Installed Windows builds keep every non-document file beside Lexly.exe, so an install
-    // folder such as D:\Program\Lexly holds settings, history versions and backups together.
+    // Installed Windows builds keep every non-document file beside MarkFlow.exe, so an install
+    // folder such as D:\Program\MarkFlow holds settings, history versions and backups together.
     if !cfg!(all(target_os = "windows", not(debug_assertions))) { return None; }
     let exe = std::env::current_exe().ok()?;
     let dir = exe.parent()?.join("data");
@@ -62,12 +62,15 @@ fn sidecar_data_dir() -> Option<PathBuf> {
 fn writable_data_dir(dir: &Path) -> bool {
     // An existing directory may be read-only even when create_dir_all succeeds.
     fs::create_dir_all(dir).is_ok()
-        && tempfile::Builder::new().prefix(".lexly-write-probe-").tempfile_in(dir).is_ok()
+        && tempfile::Builder::new().prefix(".markflow-write-probe-").tempfile_in(dir).is_ok()
 }
 fn env_dir(name: &str) -> Option<PathBuf> { std::env::var_os(name).filter(|value| !value.is_empty()).map(PathBuf::from) }
+fn dev_data_dir() -> Option<PathBuf> { env_dir("MARKFLOW_DEV_DATA_DIR").or_else(|| env_dir("LEXLY_DEV_DATA_DIR")) }
+fn headless_mode() -> bool { std::env::var_os("MARKFLOW_DEV_HEADLESS").or_else(|| std::env::var_os("LEXLY_DEV_HEADLESS")).is_some() }
 fn preferred_data_dir() -> Option<PathBuf> {
-    env_dir("LEXLY_DATA_DIR")
-        .or_else(|| if cfg!(debug_assertions) { env_dir("LEXLY_DEV_DATA_DIR") } else { None })
+    env_dir("MARKFLOW_DATA_DIR")
+        .or_else(|| env_dir("LEXLY_DATA_DIR"))
+        .or_else(|| if cfg!(debug_assertions) { dev_data_dir() } else { None })
         .or_else(sidecar_data_dir)
 }
 const MIGRATABLE: [&str; 9] = ["workspaces.json", "preferences.json", "window.json", "privacy.json", "recovery", "history", "backups", "operations", "workspace-backups"];
@@ -95,7 +98,7 @@ fn start_watch(app: &tauri::AppHandle, ws: &Workspace) {
     let Ok(mut watcher) = notify::recommended_watcher(move |event: std::result::Result<notify::Event, notify::Error>| {
         if let Ok(event) = event {
             // Temporary saves are not tree entries; final replacement events remain visible.
-            if event.paths.iter().all(|p| p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(".lexly-"))) { return; }
+            if event.paths.iter().all(|p| p.file_name().is_some_and(|n| { let name=n.to_string_lossy(); name.starts_with(".lexly-") || name.starts_with(".markflow-") })) { return; }
             let _ = app_handle.emit("workspace-changed", json!({ "workspaceId": id }));
         }
     }) else { return; };
@@ -148,7 +151,7 @@ async fn list_directory(state: State<'_, AppState>, workspace_id: String, path: 
     let mut entries = vec![];
     for entry in fs::read_dir(target)? {
         let entry = entry?; let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with(".lexly-") || name == ".git" || name == ".DS_Store" { continue; }
+        if name.starts_with(".lexly-") || name.starts_with(".markflow-") || name == ".git" || name == ".DS_Store" { continue; }
         if files::resolve(&root, &relative(&root, &entry.path()), true).is_err() { continue; }
         let is_dir = entry.file_type()?.is_dir();
         if is_dir || entry.path().extension().is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("md")) { entries.push(Entry { name, path: relative(&root, &entry.path()), is_dir }); }
@@ -484,7 +487,7 @@ fn search_roots(roots: Vec<(String, PathBuf)>, query: String, content: bool, sen
                 visited += 1;
                 if visited > 20000 || started.elapsed().as_secs() >= 3 || result.hits.len() >= 300 { result.truncated = true; return result; }
                 let name = entry.file_name().to_string_lossy().to_string();
-                if name.starts_with(".lexly-") || [".git", ".DS_Store", "node_modules", "target"].contains(&name.as_str()) { continue; }
+                if name.starts_with(".lexly-") || name.starts_with(".markflow-") || [".git", ".DS_Store", "node_modules", "target"].contains(&name.as_str()) { continue; }
                 let rel = relative(&root, &entry.path());
                 let Ok(path) = files::resolve(&root, &rel, true) else { result.skipped += 1; continue; };
                 if path.is_dir() { pending.push(path); continue; }
@@ -524,7 +527,7 @@ async fn export_file(app: tauri::AppHandle, state: State<'_, AppState>, document
     let name = format!("{}.{}", Path::new(&doc.path).file_stem().unwrap().to_string_lossy(), format);
     let mut fixture_target: Option<PathBuf> = None;
     #[cfg(debug_assertions)]
-    if std::env::var_os("LEXLY_DEV_HEADLESS").is_some() && std::env::var_os("LEXLY_DEV_DATA_DIR").is_some() {
+    if headless_mode() && dev_data_dir().is_some() {
         let data = state.core.lock().unwrap().data.join("exports"); fs::create_dir_all(&data)?; files::validate_name(&name)?; fixture_target = Some(data.join(&name));
     }
     let mut target = if let Some(path) = fixture_target.take() { path } else {
@@ -543,7 +546,7 @@ pub fn run() {
     }
     let builder = tauri::Builder::default();
     // Debug integration fixtures use independent app-data and must not interrupt the user's window.
-    let isolated = cfg!(debug_assertions) && std::env::var_os("LEXLY_DEV_DATA_DIR").is_some();
+    let isolated = cfg!(debug_assertions) && dev_data_dir().is_some();
     let builder = if isolated { builder } else { builder.plugin(tauri_plugin_single_instance::init(|app, _, _| { if let Some(window) = app.get_webview_window("main") { let _ = window.set_focus(); } })) };
     builder
         .plugin(tauri_plugin_dialog::init())
@@ -562,8 +565,10 @@ pub fn run() {
             }
         })
         .setup(move |app| {
-            let legacy = app.path().app_local_data_dir()?;
-            let data = preferred_data_dir().unwrap_or_else(|| legacy.clone());
+            let current = app.path().app_local_data_dir()?;
+            // Migrate user data from the former Lexly bundle identifier into MarkFlow's new app-data directory.
+            let legacy = current.parent().map(|parent| parent.join("com.lexly.editor")).unwrap_or_else(|| current.clone());
+            let data = preferred_data_dir().unwrap_or_else(|| current.clone());
             fs::create_dir_all(&data)?;
             migrate_legacy_data(&data, &legacy).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.message))?;
             for folder in ["recovery", "backups", "operations"] { fs::create_dir_all(data.join(folder))?; }
@@ -585,19 +590,19 @@ pub fn run() {
             }
             if !isolated {
                 use tauri::{menu::{Menu,MenuItem},tray::TrayIconBuilder};
-                let show=MenuItem::with_id(app,"show","显示 Lexly",true,None::<&str>)?;let quit=MenuItem::with_id(app,"quit","退出 Lexly",true,None::<&str>)?;let menu=Menu::with_items(app,&[&show,&quit])?;
-                let mut tray=TrayIconBuilder::new().tooltip("Lexly").menu(&menu).show_menu_on_left_click(true).on_menu_event(|app,event|{if let Some(window)=app.get_webview_window("main"){let _=window.show();let _=window.unminimize();let _=window.set_focus();if event.id.as_ref()=="quit"{let _=window.emit("tray-exit",());}}});
-                if let Some(icon)=app.default_window_icon(){tray=tray.icon(icon.clone());}tray.build(app)?;
+                let show=MenuItem::with_id(app,"show","显示 MarkFlow",true,None::<&str>)?;let quit=MenuItem::with_id(app,"quit","退出 MarkFlow",true,None::<&str>)?;let menu=Menu::with_items(app,&[&show,&quit])?;
+                let icon=tauri::image::Image::from_bytes(include_bytes!("../icons/markflow-logo.png"))?;
+                TrayIconBuilder::new().icon(icon).tooltip("MarkFlow").menu(&menu).show_menu_on_left_click(true).on_menu_event(|app,event|{if let Some(window)=app.get_webview_window("main"){let _=window.show();let _=window.unminimize();let _=window.set_focus();if event.id.as_ref()=="quit"{let _=window.emit("tray-exit",());}}}).build(app)?;
             }
             if let Some(window)=app.get_webview_window("main"){if let Some(monitor)=window.current_monitor().ok().flatten().or_else(||window.primary_monitor().ok().flatten()){let scale=monitor.scale_factor();let maximum_width=(monitor.size().width as f64/scale-32.0).max(560.0);let maximum_height=(monitor.size().height as f64/scale-64.0).max(400.0);let _=window.set_min_size(Some(tauri::LogicalSize::new(680.0_f64.min(maximum_width),480.0_f64.min(maximum_height))));if !window.is_maximized().unwrap_or(false){if let Ok(size)=window.inner_size(){let _=window.set_size(tauri::LogicalSize::new((size.width as f64/scale).min(maximum_width),(size.height as f64/scale).min(maximum_height)));}}}}
             for ws in &workspaces { start_watch(app.handle(), ws); }
             #[cfg(debug_assertions)]
-            if std::env::var_os("LEXLY_DEV_HEADLESS").is_some() { if let Some(window) = app.get_webview_window("main") { window.hide()?; } }
+            if headless_mode() { if let Some(window) = app.get_webview_window("main") { window.hide()?; } }
             Ok(())
         })
         .invoke_handler({let handler:Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>)->bool+Send+Sync>=Box::new(tauri::generate_handler![list_system_fonts,knowledge_index,privacy_status,privacy_lock,privacy_unlock,privacy_password,save_window_geometry,valid_file_references,check_release,check_signed_update,convert_document_format,list_operation_backups,restore_operation_backup,read_version,list_versions,snapshot_document,read_disk_document,choose_backup_directory,backup_workspace,list_workspace_backups,open_backup_directory,reconnect_workspace,open_local_paths,bootstrap, data_directory, open_data_directory, select_workspace, remove_workspace, list_directory, open_in_system_directory, document_metadata, open_document, check_document, close_document, save_document, write_recovery, discard_recovery, open_recovery, save_preferences, create_entry, import_documents, relocate_entry, relocate_entry_between_workspaces, trash_entry, import_image, open_image_directory, resolve_image, resolve_markdown_link, save_temporary_document, save_document_as, search_workspace, export_file, archive_document, list_archives, restore_archive, delete_archive, tag_candidates, apply_tag_changes]); move |invoke:tauri::ipc::Invoke<tauri::Wry>| {let locked=invoke.message.webview().state::<AppState>().privacy.locked.load(std::sync::atomic::Ordering::SeqCst);if locked&&!matches!(invoke.message.command(),"privacy_status"|"privacy_unlock"|"save_window_geometry"){invoke.resolver.reject(json!({"code":"LOCKED","message":"请先解锁应用"}));return true}handler(invoke)}})
         .run(tauri::generate_context!())
-        .expect("Lexly failed to start");
+        .expect("MarkFlow failed to start");
 }
 
 #[cfg(test)]

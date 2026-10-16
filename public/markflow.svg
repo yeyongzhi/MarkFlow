@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><rect width="256" height="256" rx="64" fill="#277c62"/><path d="M74 56h75l33 34v110H74z" fill="#fffdf7"/><path d="M149 56v34h33" fill="#badbcf"/><path d="M96 120h64M96 144h64M96 168h40" stroke="#277c62" stroke-width="10" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none" role="img"><rect width="1024" height="1024" fill="#4F9B75"/>
+  <title id="title">MarkFlow hand-drawn outline mark, stronger variant</title>
+  <desc id="desc">Pure white hand-drawn folded document outline with uneven Markdown strokes and a flowing M. Transparent background.</desc>
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M282 188C265 186 247 197 243 219C241 286 247 350 243 407C239 468 246 532 242 595C239 652 245 710 242 762C244 787 258 803 282 804C340 801 398 808 456 804C516 800 575 807 635 803C674 801 709 806 738 804C762 802 778 786 778 762C775 700 781 640 777 580C774 524 782 464 778 409L779 355C738 311 669 237 610 188C555 190 502 184 450 188C391 191 337 185 282 188Z" stroke-width="38"/>
+    <path d="M610 189C608 223 614 259 610 294C609 314 623 327 644 327C687 325 733 329 778 329" stroke-width="32"/>
+    <path d="M335 405C395 407 445 401 502 405C532 407 559 403 585 405M335 500C378 497 420 503 462 500C477 499 489 501 500 500" stroke-width="32"/>
+    <path d="M320 725C345 704 364 660 380 625C393 595 410 574 430 581C455 590 466 624 472 659C478 694 483 723 505 727C527 732 542 704 556 675C573 640 592 597 613 588C633 580 651 589 665 610C681 636 685 674 695 702C702 720 716 730 730 725" stroke-width="52"/>
+  </g>
+</svg>

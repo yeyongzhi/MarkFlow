@@ -43,6 +43,6 @@ Windows 桌面核心流程具备实现和自动化验证证据，适合在完成
 
 UI 与原生测试仅操作 artifacts 下的隔离测试工作区，没有访问个人笔记。旧验证记录见 `docs/verification.md`，不将旧结果冒充本次安装验收。
 
-产品名称已改为 MarkFlow，可执行文件为 markflow.exe。内部标识 com.lexly.editor 和数据键保留以兼容早期配置。website/ 为产品站源码，main 配置部署 Pages，dev/PR 只验证构建。本次仅本地准备，未推送分支或标签。
+产品名称和应用标识均为 MarkFlow（`com.markflow.editor`）。旧标识数据通过首次启动迁移，并保留源目录。website/ 为产品站源码，main 配置部署 Pages，dev/PR 只验证构建。本次仅本地准备，未推送分支或标签。
 
 更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。

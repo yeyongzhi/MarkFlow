@@ -12,7 +12,7 @@ await mkdir(resolve(root,'大目录'),{recursive:true});await Promise.all(Array.
 await writeFile(resolve(second, '第二份.md'), '# 第二个工作区\n')
 await writeFile(resolve(data, 'workspaces.json'), JSON.stringify([{ id: 'native', name: '原生验证工作区', path: root, available: true }, { id: 'second', name: '第二个工作区', path: second, available: true }]))
 await writeFile(resolve(data, 'preferences.json'), JSON.stringify({ defaultView: 'source' }))
-const child = spawn(resolve('src-tauri/target/debug/markflow.exe'), [], { windowsHide: true, env: { ...process.env, LEXLY_DEV_DATA_DIR: data, WEBVIEW2_USER_DATA_FOLDER: resolve(data, 'webview'), LEXLY_DEV_HEADLESS: '1', WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9223' }, stdio: ['ignore','pipe','pipe'] })
+const child = spawn(resolve('src-tauri/target/debug/markflow.exe'), [], { windowsHide: true, env: { ...process.env, MARKFLOW_DEV_DATA_DIR: data, WEBVIEW2_USER_DATA_FOLDER: resolve(data, 'webview'), MARKFLOW_DEV_HEADLESS: '1', WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9223' }, stdio: ['ignore','pipe','pipe'] })
 let logs = ''; child.stderr.on('data', b => { logs += b }); child.stdout.on('data', b => { logs += b })
 let browser, page
 async function waitForDebugger() { for (let i = 0; i < 100; i++) { try { const response = await fetch('http://127.0.0.1:9223/json/version'); if (response.ok) return } catch {} if (child.exitCode !== null) throw new Error(`Native app exited: ${logs}`); await new Promise(r => setTimeout(r, 100)) }; throw new Error(`No WebView2 debugger: ${logs}`) }
@@ -92,8 +92,8 @@ try {
   await expect.poll(async () => (await readdir(resolve(data,'recovery'))).length).toBeGreaterThan(0)
   const boot = await invoke('bootstrap'), recovered = await invoke('open_recovery', {draftId:boot.drafts[0].id})
   assert(recovered.text.includes('删除后的草稿'))
-  await page.screenshot({path:'artifacts/lexly-native.png'})
+  await page.screenshot({path:'artifacts/markflow-native.png'})
   assert.deepEqual(errors, [])
   console.log('Native verified: Windows recycle bin, resource boundaries, external deletion and recovery draft. Fixtures:', run)
-} catch(e) { if (page) await page.screenshot({path:'artifacts/lexly-native-failure.png'}).catch(()=>{}); console.error('Native logs:', logs); throw e }
+} catch(e) { if (page) await page.screenshot({path:'artifacts/markflow-native-failure.png'}).catch(()=>{}); console.error('Native logs:', logs); throw e }
 finally { if (browser) await browser.close().catch(()=>{}); child.kill() }

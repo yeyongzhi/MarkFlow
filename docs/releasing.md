@@ -15,9 +15,9 @@ Windows 使用 NSIS 当前用户安装包，可在向导选择 `D:\Program\MarkF
 | WebView2 浏览器配置和缓存 | `data\webview` |
 | Markdown 正文和附件 | 用户选择的工作区；不会自动移动到安装目录 |
 
-例：安装在 `D:\Program\MarkFlow`，设置就在 `D:\Program\MarkFlow\data`。安装目录无法创建文件时，应用配置回退到 `%LOCALAPPDATA%\com.lexly.editor`。开发版通常使用此 AppData 路径；macOS 使用 `~/Library/Application Support/com.lexly.editor`。系统运行时、安装器临时文件和注册表不由这项设置统一搬到 D 盘。
+例：安装在 `D:\Program\MarkFlow`，设置就在 `D:\Program\MarkFlow\data`。安装目录无法创建文件时，应用配置回退到当前 Tauri 标识对应的 AppData 目录；macOS 使用对应的 Application Support 目录。系统运行时、安装器临时文件和注册表不由这项设置统一搬到 D 盘。当前标识为 `com.markflow.editor`；首次启动会把旧标识 `com.lexly.editor` 目录中的设置、草稿、历史和备份复制到新目录，旧目录保留。
 
-`LEXLY_DATA_DIR` 环境变量优先于默认位置；调试版还支持 `LEXLY_DEV_DATA_DIR`。外部设置的 `WEBVIEW2_USER_DATA_FOLDER` 可覆盖浏览器缓存位置。自定义工作区备份目录也可改变备份落点。实际路径以设置 → 保存与备份 → 数据目录为准。
+`MARKFLOW_DATA_DIR` 环境变量优先于默认位置；调试版还支持 `MARKFLOW_DEV_DATA_DIR`。外部设置的 `WEBVIEW2_USER_DATA_FOLDER` 可覆盖浏览器缓存位置。自定义工作区备份目录也可改变备份落点。实际路径以设置 → 数据与安全 → 数据目录为准。
 
 旧 AppData 中的配置会在满足迁移条件时复制到新目录，原目录保留。普通卸载保留安装目录下的 data；勾选“删除应用数据”时自定义卸载钩子会删除它。更换安装目录不会自动搬迁另一个安装目录的 data，需退出程序后手动备份/迁移。共享安装目录也意味着共享配置，不适合多个 Windows 用户共用。
 
@@ -33,7 +33,7 @@ pnpm version:check
 
 修复递增 patch（0.1.1）；新增兼容功能递增 minor（0.2.0）；不兼容变更需要单独记录，1.0 之后递增 major。测试发布可用 `0.2.0-beta.1`。同一公开版本不重新替换安装包，修复后发新版本。
 
-每个版本更新根目录 `CHANGELOG.md`，记录行为变化、修复和影响配置/文档的兼容性事项。保持 `com.lexly.editor` 标识稳定，否则默认数据目录等行为会变化。
+每个版本更新根目录 `CHANGELOG.md`，记录行为变化、修复和影响配置/文档的兼容性事项。发布后保持 `com.markflow.editor` 标识稳定；Tauri 会用标识区分应用并派生系统数据目录。
 
 ## GitHub 首次准备
 
@@ -66,6 +66,8 @@ git push origin v0.1.0
 
 参考：[Tauri Windows 安装器](https://v2.tauri.app/distribute/windows-installer/)、[Tauri 构建与 Release Action](https://github.com/tauri-apps/tauri-action)。
 
-产品名称已改为 MarkFlow，可执行文件为 markflow.exe。内部标识 com.lexly.editor 和数据键保留以兼容早期配置。website/ 为产品站源码，main 配置部署 Pages，dev/PR 只验证构建。本次仅本地准备，未推送分支或标签。
+产品名称和应用标识均为 MarkFlow（`com.markflow.editor`）。首次启动会从旧标识目录迁移数据并保留源数据。website/ 为产品站源码，main 配置部署 Pages，dev/PR 只验证构建。本次仅本地准备，未推送分支或标签。
 
 更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。
+
+0.1.0-beta.6 轮换了更新签名密钥。beta5 及更早版本内置旧公钥，无法通过应用内更新安装 beta6；用户需从 Release 页面手动下载安装。beta6 内置新公钥，后续版本继续使用 `.local/updater.key` 对应的密钥。

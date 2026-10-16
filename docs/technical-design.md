@@ -167,7 +167,7 @@ CSP 限制脚本及资源为本地来源，图片仅允许本地、data / blob�
 配置同时记录打开文档的工作区、路径、视图和活动文档。失效标签跳过，工作区入口保留不可访问提示。字号、主题色、模式与视图在启动时校验。
 
 ```text
-数据目录/                 Windows 安装包版为 <安装目录>\data\，否则 %LOCALAPPDATA%\com.lexly.editor\
+数据目录/                 Windows 安装包版为 <安装目录>\data\，否则使用 MarkFlow 标识对应目录；首次启动会从旧 Lexly 标识目录迁移数据
   workspaces.json         工作区注册表；file- 前缀的独立文件工作区不落盘
   preferences.json        外观、保存、会话标签、最近 / 收藏、标签注册表与标签颜色
   window.json             窗口尺寸、位置与最大化状态
@@ -181,7 +181,7 @@ CSP 限制脚本及资源为本地来源，图片仅允许本地、data / blob�
   webview/                WebView2 用户数据（缓存与前端 localStorage）
 ```
 
-解析顺序为 `LEXLY_DATA_DIR`、debug 专用 `LEXLY_DEV_DATA_DIR`、Windows release 构建下与 `MarkFlow.exe` 同级的 `data\`、最后才是应用本地数据目录；同级 `data\` 创建失败（如只读的 Program Files）自动回退。选定新目录且其中尚无 `workspaces.json` / `preferences.json` 时，首次启动从旧目录复制以上条目并写 `migration.json`，旧目录保留不动，可回滚。WebView2 数据目录用 `WEBVIEW2_USER_DATA_FOLDER` 一并落到 `data\webview`。NSIS 卸载仅在勾选“删除应用数据”时清除 `<安装目录>\data`（`src-tauri/installer-hooks.nsh`）。
+解析顺序为 `MARKFLOW_DATA_DIR`（旧版 `LEXLY_DATA_DIR` 为兼容别名）、debug 专用 `MARKFLOW_DEV_DATA_DIR`（旧版 `LEXLY_DEV_DATA_DIR` 为兼容别名）、Windows release 构建下与 `MarkFlow.exe` 同级的 `data\`、最后才是应用本地数据目录；同级 `data\` 创建失败（如只读的 Program Files）自动回退。选定新目录且其中尚无 `workspaces.json` / `preferences.json` 时，首次启动从旧目录复制以上条目并写 `migration.json`，旧目录保留不动，可回滚。WebView2 数据目录用 `WEBVIEW2_USER_DATA_FOLDER` 一并落到 `data\webview`。NSIS 卸载仅在勾选“删除应用数据”时清除 `<安装目录>\data`（`src-tauri/installer-hooks.nsh`）。
 
 正文最终存储仍是工作区原 `.md`。首版未实现 preferences 字段 schema 版本化迁移、草稿过期自动清理及备份空间管理，不会自动删除上述保护材料。
 
@@ -189,7 +189,7 @@ CSP 限制脚本及资源为本地来源，图片仅允许本地、data / blob�
 
 Windows 使用 NSIS 当前用户安装（无需管理员，可在向导中选择安装目录如 `D:\Program\MarkFlow`），中 / 英语言选择；macOS 最低配置为 12，构建 app / dmg。GitHub Actions 分别配置 Windows x64、macOS arm64 和 x64，日常流程上传构建产物，版本标签流程创建 Windows Release 草稿。更新检查直接读取官方 GitHub Releases；已接入 Tauri updater 签名下载和安装；安装程序尚未配置 Windows 代码签名。
 
-Windows 原生自动化使用 debug-only `LEXLY_DEV_DATA_DIR` 与 `LEXLY_DEV_HEADLESS` 测试隔离；release 构建忽略这两个变量，但接受 `LEXLY_DATA_DIR` 指定数据目录，打包冒烟检查（`scripts/verify-release.mjs`）据此落在 `artifacts/release-data/`。测试目录与正文均位于项目 `artifacts/`，不会使用个人工作区。结果见 [验证记录](verification.md)。
+Windows 原生自动化使用 debug-only `MARKFLOW_DEV_DATA_DIR` 与 `MARKFLOW_DEV_HEADLESS` 测试隔离；release 构建忽略这两个变量，但接受 `MARKFLOW_DATA_DIR` 指定数据目录，打包冒烟检查（`scripts/verify-release.mjs`）据此落在 `artifacts/release-data/`。测试目录与正文均位于项目 `artifacts/`，不会使用个人工作区。结果见 [验证记录](verification.md)。
 
 后续应在真实 Mac 验证两种架构、废纸篓、中文输入法、字体、系统缩放和快捷键；扩展标准语法往返语料与大文件 / 大目录性能；补全故障注入和操作日志恢复体验；对外发布前准备签名、公证及升级分发。
 
@@ -207,7 +207,7 @@ Windows 原生自动化使用 debug-only `LEXLY_DEV_DATA_DIR` 与 `LEXLY_DEV_HEA
 
 ## 12. 工作区归档与 front-matter
 
-`archive.rs` 将文档按 UUID 存入 `.lexly-archive/<id>/document.md`，配套 manifest 记录原路径和归档时间。归档前保存并校验已打开文档的磁盘哈希，同文件系统移动保留原字节；恢复使用安全路径检查、缺失父目录创建及 create_new 防止覆盖。同名时另存恢复副本。永久删除仅允许该 UUID 目录中的预期文件，遇到未知内容中止。不移动图片附件。
+`archive.rs` 将新归档按 UUID 存入 `.markflow-archive/<id>/document.md`，配套 manifest 记录原路径和归档时间；已有的 `.lexly-archive` 也会继续列出、恢复和删除，不需要用户搬动归档。归档前保存并校验已打开文档的磁盘哈希，同文件系统移动保留原字节；恢复使用安全路径检查、缺失父目录创建及 create_new 防止覆盖。同名时另存恢复副本。永久删除仅允许该 UUID 目录中的预期文件，遇到未知内容中止。不移动图片附件。
 
 `frontmatter.ts` 使用 yaml 文档 AST 更新 `tags`，保留其他属性和注释；解析限额为 64KiB 元数据、50 次别名展开，拒绝损坏 YAML 和不兼容 tags 类型。正文编辑保留原 front-matter 前缀；预览、统计和大纲屏蔽元数据，并保留换行偏移，使标题跳转仍对应源码真实行号。
 

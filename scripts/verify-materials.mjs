@@ -11,7 +11,7 @@ await writeFile(resolve(root, '灵感清单.md'), '# 灵感清单\n\n从小想�
 await writeFile(resolve(data, 'workspaces.json'), JSON.stringify([{ id: 'design', name: '我的写作空间', path: root, available: true }]))
 await writeFile(resolve(data, 'preferences.json'), JSON.stringify({ defaultView: 'source', mode: 'light', autoSave: false }))
 await writeFile(resolve(root,'test.md'),'# test');await writeFile(resolve(root,'这是一个非常长的文档名称用于后缀显示测试.md'),'# long')
-const child = spawn(resolve('src-tauri/target/debug/markflow.exe'), [], { windowsHide: true, env: { ...process.env, LEXLY_DEV_DATA_DIR: data, WEBVIEW2_USER_DATA_FOLDER: resolve(data, 'webview'), LEXLY_DEV_HEADLESS: '1', WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9243' }, stdio: ['ignore','pipe','pipe'] })
+const child = spawn(resolve('src-tauri/target/debug/markflow.exe'), [], { windowsHide: true, env: { ...process.env, MARKFLOW_DEV_DATA_DIR: data, WEBVIEW2_USER_DATA_FOLDER: resolve(data, 'webview'), MARKFLOW_DEV_HEADLESS: '1', WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9243' }, stdio: ['ignore','pipe','pipe'] })
 let browser, page, logs = ''
 child.stderr.on('data', b => { logs += b }); child.stdout.on('data', b => { logs += b })
 try {
@@ -27,7 +27,7 @@ try {
   await page.getByRole('button',{name:'test.md 的菜单',exact:true}).click();await page.getByRole('menuitem',{name:'收藏文档',exact:true}).click();await sidebar.getByRole('tab',{name:'收藏',exact:true}).click();await expect(sidebar.getByRole('button',{name:'打开收藏文档 test.md',exact:true})).toBeVisible()
   await page.getByRole('button',{name:'文章操作',exact:true}).click();await page.getByRole('menuitem',{name:'取消收藏',exact:true}).click();await expect(sidebar).toContainText('暂无收藏文档')
   await page.getByRole('button',{name:'文章操作',exact:true}).click();await page.getByRole('menuitem',{name:'收藏文档',exact:true}).click();await expect(sidebar.getByRole('button',{name:'打开收藏文档 test.md',exact:true})).toBeVisible()
-  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'外观',exact:true}).click()
+  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'外观',exact:true}).click()
   await page.getByRole('combobox',{name:'界面材质',exact:true}).click();await page.getByRole('option',{name:'毛玻璃 · 通透',exact:true}).click();await expect(page.locator('html')).toHaveAttribute('data-material','glass');assert((await page.locator('.workspace-sidebar').evaluate(el=>getComputedStyle(el).backdropFilter)).includes('blur'))
   await page.getByRole('combobox',{name:'界面圆角',exact:true}).click();await page.getByRole('option',{name:'圆润 · 18px',exact:true}).click();assert.equal(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--radius').trim()),'18px')
   await page.getByRole('combobox',{name:'毛玻璃模糊',exact:true}).click();await page.getByRole('option',{name:'柔雾',exact:true}).click();assert((await page.locator('.workspace-sidebar').evaluate(el=>getComputedStyle(el).backdropFilter)).includes('26px'))

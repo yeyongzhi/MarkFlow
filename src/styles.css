@@ -199,7 +199,6 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); o
 
 
 
-
 .live-editor input[type=checkbox] { accent-color: var(--primary); }
 .live-editor :is(.vditor-ir__node[data-type=link-ref], .vditor-ir__node[data-type=footnotes-ref], .vditor-toc, .vditor-toc span[data-type=toc-h], .vditor-linkcard__site) { color: var(--primary); }
 ::selection { background: var(--accent); color: var(--accent-foreground); }
@@ -296,20 +295,20 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); o
 .archive-item { border:1px solid var(--border); border-radius:8px; padding:12px; display:flex; align-items:center; gap:12px; }
 
 /* Vditor owns its toolbar DOM; these utilities bridge it to the app toolbar. */
-.lexly-format-toolbar.vditor-toolbar { @apply static flex h-auto min-h-8 items-center justify-start border-0 bg-transparent p-0!; }
-.lexly-format-toolbar.vditor-toolbar .vditor-toolbar__item { @apply px-0.5; }
-.lexly-format-toolbar.vditor-toolbar button[data-type] { @apply flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring; }
-.lexly-format-toolbar.vditor-toolbar .vditor-hint { @apply z-50 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg; margin-top: 6px; }
-.lexly-format-toolbar.vditor-toolbar .vditor-panel--arrow::before { display: none; }
-.lexly-format-toolbar.vditor-toolbar .vditor-hint button { @apply h-auto w-full rounded-md px-3 py-1.5 text-left text-sm text-popover-foreground transition-colors duration-150; }
+.markflow-format-toolbar.vditor-toolbar { @apply static flex h-auto min-h-8 items-center justify-start border-0 bg-transparent p-0!; }
+.markflow-format-toolbar.vditor-toolbar .vditor-toolbar__item { @apply px-0.5; }
+.markflow-format-toolbar.vditor-toolbar button[data-type] { @apply flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring; }
+.markflow-format-toolbar.vditor-toolbar .vditor-hint { @apply z-50 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg; margin-top: 6px; }
+.markflow-format-toolbar.vditor-toolbar .vditor-panel--arrow::before { display: none; }
+.markflow-format-toolbar.vditor-toolbar .vditor-hint button { @apply h-auto w-full rounded-md px-3 py-1.5 text-left text-sm text-popover-foreground transition-colors duration-150; }
 /* Override Vditor's important hover colors, which otherwise match the panel background. */
-.lexly-format-toolbar.vditor-toolbar .vditor-hint button:not(.vditor-menu--disabled):is(:hover, :focus-visible),
-.lexly-format-toolbar.vditor-toolbar .vditor-hint .vditor-hint--current { background-color: var(--accent) !important; color: var(--accent-foreground) !important; }
-.lexly-format-toolbar.vditor-toolbar svg { @apply size-3.5 fill-current; }
-.lexly-format-toolbar.vditor-toolbar .vditor-menu--current { @apply bg-accent text-accent-foreground; }
-.lexly-format-toolbar.vditor-toolbar .vditor-toolbar__divider { @apply mx-1.5 h-4 border-border; }
+.markflow-format-toolbar.vditor-toolbar .vditor-hint button:not(.vditor-menu--disabled):is(:hover, :focus-visible),
+.markflow-format-toolbar.vditor-toolbar .vditor-hint .vditor-hint--current { background-color: var(--accent) !important; color: var(--accent-foreground) !important; }
+.markflow-format-toolbar.vditor-toolbar svg { @apply size-3.5 fill-current; }
+.markflow-format-toolbar.vditor-toolbar .vditor-menu--current { @apply bg-accent text-accent-foreground; }
+.markflow-format-toolbar.vditor-toolbar .vditor-toolbar__divider { @apply mx-1.5 h-4 border-border; }
 
-.lexly-format-toolbar.vditor-toolbar .vditor-toolbar__item[hidden] { @apply hidden; }
+.markflow-format-toolbar.vditor-toolbar .vditor-toolbar__item[hidden] { @apply hidden; }
 
 /* Third-party editor DOM and global preference tokens. */
 [data-density=compact] .tree-row { @apply min-h-7; }
