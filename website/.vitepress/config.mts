@@ -8,9 +8,9 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   sitemap: { hostname: 'https://yeyongzhi.github.io/MarkFlow/' },
-  head: [['link', { rel: 'icon', href: '/MarkFlow/markflow.svg' }]],
+  head: [['link', { rel: 'icon', href: '/MarkFlow/markflow.png' }]],
   themeConfig: {
-    logo: '/markflow.svg',
+    logo: '/markflow.png',
     nav: [
       { text: '功能', link: '/features' },
       { text: '使用指南', link: '/guide/getting-started' },

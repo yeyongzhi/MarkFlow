@@ -5,7 +5,7 @@ hero:
   text: 让想法自由流动
   tagline: 一款本地 Markdown 编辑器。轻松写作、清晰阅读，让文档留在你自己的文件夹里。
   image:
-    src: /markflow.svg
+    src: /markflow.png
     alt: MarkFlow
   actions:
     - theme: brand

@@ -8,7 +8,7 @@ const installerUrl = `https://github.com/yeyongzhi/MarkFlow/releases/download/v$
 
 <a :href="installerUrl" class="download-installer">下载 Windows x64 测试版 · {{ installerVersion }}</a>
 
-当前版本为 **{{ version }}**。本次更新完善自动保存与草稿恢复，调整设置页面，并增加工作区路径提示。查看[更新日志](./changelog)。
+当前版本为 **{{ version }}**。本次更新为原有品牌 Logo 增加圆角，并统一应用、文档站与桌面图标。查看[更新日志](./changelog)。
 
 <style>
 .download-installer { display: inline-block; padding: 12px 20px; border-radius: 8px; background: var(--vp-c-brand-1); color: white !important; font-weight: 600; text-decoration: none !important; }

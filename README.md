@@ -1,5 +1,11 @@
 # MarkFlow
 
+<img src="public/markflow.png" width="96" alt="MarkFlow" />
+
+当前代码版本：**v0.1.0-beta.7（测试版）**。
+
+[查看 beta7 发布](https://github.com/yeyongzhi/MarkFlow/releases/tag/v0.1.0-beta.7) · [查看更新日志](CHANGELOG.md)
+
 [产品文档](https://yeyongzhi.github.io/MarkFlow/) · [下载安装包](https://github.com/yeyongzhi/MarkFlow/releases) · [反馈问题](https://github.com/yeyongzhi/MarkFlow/issues)
 
 本地 Markdown 编辑器，使用 Tauri 2、Vue 3、TypeScript、Vite、Tailwind CSS 4 和 shadcn-vue。文档直接保存在所选工作区的真实 `.md` 文件中。
@@ -153,8 +159,14 @@ docs/                       产品需求、实现架构、验证记录
 
 ## 产品文档站
 
-源码位于 `website/`。运行 `pnpm docs:dev` 本地查看，`pnpm docs:build` 生成静态站点。main 分支通过 GitHub Actions 部署 Pages，dev 和 PR 只验证构建。仓库 Settings → Pages 的 Source 需选择 GitHub Actions。
+源码位于 `website/`。运行 `pnpm docs:dev` 本地查看，`pnpm docs:build` 生成静态站点。默认主分支 dev 通过 GitHub Actions 构建并部署 Pages。仓库 Settings → Pages 的 Source 需选择 GitHub Actions。
 
 产品名称已改为 MarkFlow。内部应用标识和既有数据键保留，以兼容早期配置和历史记录。
 
 更新接入（2026-10-08）：应用内检查后下载并安装签名更新，安装前两次同步/保存文档与会话；签名验证失败或保存冲突时阻止安装。版本标签工作流生成安装包签名与 latest.json，公开 Release 后更新源才可访问。本地执行 pnpm release:build 使用 .local/updater.key。私钥须保管和备份，不能提交 Git，不能随意换钥，否则旧版无法验证新版。普通 CI 使用 tauri.ci.conf.json 关闭签名产物，正式发布必须签名。更新实际安装未自动执行，避免中断当前应用；首次跨版本升级仍需隔离环境验收。
+
+## 技术栈与联系
+
+Vue 3 与 TypeScript 构建界面，shadcn-vue 与 Tailwind CSS 提供组件和样式；Tauri 2 与 Rust 提供桌面运行时和本地文件服务，Vite 构建应用，VitePress 构建产品文档。正文使用本地 Markdown，设置与历史记录保存在本地数据目录。
+
+作者：[yeyongzhi](https://github.com/yeyongzhi)。问题与建议请通过 [Issues](https://github.com/yeyongzhi/MarkFlow/issues) 反馈。
