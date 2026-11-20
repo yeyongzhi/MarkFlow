@@ -2,9 +2,9 @@
 
 <img src="public/markflow.png" width="96" alt="MarkFlow" />
 
-当前代码版本：**v0.1.0-beta.7（测试版）**。
+当前代码版本：**v0.1.0-beta.8（测试版）**。
 
-[查看 beta7 发布](https://github.com/yeyongzhi/MarkFlow/releases/tag/v0.1.0-beta.7) · [查看更新日志](CHANGELOG.md)
+[查看 beta8 发布（发布后可用）](https://github.com/yeyongzhi/MarkFlow/releases/tag/v0.1.0-beta.8) · [查看更新日志](CHANGELOG.md)
 
 [产品文档](https://yeyongzhi.github.io/MarkFlow/) · [下载安装包](https://github.com/yeyongzhi/MarkFlow/releases) · [反馈问题](https://github.com/yeyongzhi/MarkFlow/issues)
 
@@ -60,7 +60,7 @@ Windows 已完成真实 Tauri/WebView2 集成验证。macOS 已配置构建，�
 - 删除文件/目录、批量标签、编码转换、丢弃恢复草稿产生可恢复材料；恢复前检查目标，不覆盖随后产生的修改。
 - UTF-8、UTF-8 BOM、UTF-16LE/BE BOM 和 LF/CRLF 可检测、保留与显式转换。无 BOM 的旧式编码不会猜测转换。
 
-更新检查内置 MarkFlow 官方 GitHub Releases，无需填写地址。点击“检查更新”会联网查询最新公开正式版本并显示说明；草稿和预发布不作为正式更新。首版尚未发布时显示相应提示，发现更新后可打开下载页面安装。已接入 Tauri updater，发现新版后可点击下载并安装；安装前保存文档并验证更新包签名。
+更新检查使用 GitHub Releases 的公开订阅和更新清单。测试版可接收后续 beta 和正式版，正式版只接收正式更新；安装前保存文档并验证更新包签名。
 
 详细范围与验证见 [本轮验收清单](docs/roadmap-implementation.md)。
 

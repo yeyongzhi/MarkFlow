@@ -39,7 +39,7 @@ function action(type: string) { emit('action', type, props.workspace.id, props.e
         <component :is="entry.isDir ? expanded ? FolderOpenIcon : FolderIcon : FileTextIcon" :class="cn('tree-icon size-4 shrink-0 text-muted-foreground', root && 'text-primary', !entry.isDir && store.active?.path === entry.path && store.active?.workspaceId === workspace.id && 'text-accent-foreground')" />
         <span class="truncate">{{ entry.name }}</span>
         <span v-if="root && !workspace.available" class="text-xs text-destructive">不可访问</span>
-      </button></TooltipTrigger><TooltipContent side="right" class="max-w-80 break-all">{{ tooltipPath }}</TooltipContent></Tooltip>
+      </button></TooltipTrigger><TooltipContent side="top" :side-offset="4" class="max-w-80 break-all">{{ tooltipPath }}</TooltipContent></Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger as-child><Button variant="ghost" size="icon-xs" class="tree-menu opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" :aria-label="`${entry.name} 的菜单`"><MoreHorizontalIcon /></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="start" class="min-w-48">

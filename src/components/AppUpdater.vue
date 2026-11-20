@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { installProtectedUpdate } from '@/services/update-install'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
@@ -21,13 +22,8 @@ async function checkUpdate() {
   checking.value = true; checked.value = false; error.value = ''; version.value = ''; notes.value = ''
   try {
     await update?.close(); update = null
-    const release = await call<{ noRelease?: boolean; available: boolean }>('check_release')
-    if (release.noRelease) { toast.info('当前更新通道尚无公开版本'); return }
-    if (release.available) {
-      const metadata = await call<ConstructorParameters<typeof Update>[0] | null>('check_signed_update')
-      update = metadata ? new Update(metadata) : null
-      if (!update) throw new Error('发现新版本，但该版本的签名更新清单尚不可用')
-    }
+    const metadata = await call<ConstructorParameters<typeof Update>[0] | null>('check_signed_update')
+    update = metadata ? new Update(metadata) : null
     version.value = update?.version || ''; notes.value = update?.body || ''; checked.value = true
     if (!update) toast.success('当前已是最新版本')
   } catch (e) { error.value = `检查失败：${message(e)}。请确认网络及该版本的更新包已发布。`; toast.error('检查更新失败') }
@@ -50,10 +46,18 @@ async function restart() {
   try { window.dispatchEvent(new CustomEvent('markflow-sync-editors')); if (!await store.flush() || !await store.protectDrafts()) throw new Error('请先处理未保存文档'); await store.persistNow(); await relaunch() }
   catch (e) { toast.error(message(e)) }
 }
+async function openReleases() {
+  try { await openUrl('https://github.com/yeyongzhi/MarkFlow/releases') }
+  catch (e) { toast.error('无法打开发布页面', { description: message(e) }) }
+}
 </script>
 <template>
   <div class="flex w-full max-w-2xl flex-col items-start gap-3 border-t pt-5" aria-live="polite">
     <Button v-if="!installed" class="min-w-28" :disabled="checking || installing" @click="checkUpdate"><RefreshCwIcon data-icon="inline-start" :class="checking && 'animate-spin'" />{{ checking ? '正在检查…' : '检查更新' }}</Button>
+    <template v-if="error">
+      <p class="text-sm text-destructive" role="alert">{{ error }}</p>
+      <Button v-if="!installing && !installed" variant="outline" @click="openReleases">打开发布页面</Button>
+    </template>
     <p v-if="checked && !version" class="text-sm text-muted-foreground">当前已是最新版本。</p>
     <template v-if="version && !installed">
       <p class="text-sm font-medium">发现新版本 {{ version }}</p>

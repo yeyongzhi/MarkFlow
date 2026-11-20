@@ -92,16 +92,23 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
         <Card role="complementary" aria-label="设置导航" class="min-h-0 w-[150px] shrink-0 gap-4 overflow-hidden border-border/70 bg-sidebar p-3 sm:w-[190px] sm:p-4">
           <ScrollArea class="min-h-0 w-full flex-1">
             <nav aria-label="设置分类" class="flex flex-col gap-1 p-1">
-              <Button v-for="item in categories" :key="item.value" :variant="category === item.value ? 'secondary' : 'ghost'" :aria-current="category === item.value ? 'page' : undefined" :disabled="tagBusy" class="h-10 w-full shrink-0 justify-start gap-3 px-3" @click="category = item.value"><component :is="item.icon" />{{ item.label }}</Button>
+              <Button v-for="item in categories" :key="item.value" variant="ghost" :aria-current="category === item.value ? 'page' : undefined" :disabled="tagBusy" class="settings-nav-item h-10 w-full shrink-0 justify-start gap-3 px-3" @click="category = item.value"><component :is="item.icon" />{{ item.label }}</Button>
             </nav>
           </ScrollArea>
           <Button variant="ghost" class="h-10 w-full shrink-0 justify-start gap-3 px-3 text-foreground/60 hover:bg-muted hover:text-foreground" :disabled="tagBusy" @click="emit('update:open',false)"><ArrowLeftIcon class="size-4" /><span>返回应用</span></Button>
         </Card>
-        <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">      <div class="relative border-b px-6 py-2"><Input v-model="settingsQuery" aria-label="搜索设置" placeholder="搜索设置，例如自动保存、字体…"/><div v-if="settingsQuery" class="absolute inset-x-6 top-full z-10"><ScrollArea class="h-64 rounded-lg border bg-popover shadow-lg"><div class="p-1"><Button v-for="item in settingsResults" :key="item.category+item.label" variant="ghost" class="w-full justify-start" @click="locate(item)">{{item.label}}<span class="ml-auto text-xs text-muted-foreground">{{categories.find(c=>c.value===item.category)?.label}}</span></Button><p v-if="!settingsResults.length" class="p-3 text-sm text-muted-foreground">没有匹配设置。</p></div></ScrollArea></div></div>
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">      <div class="relative px-3 pb-3 pt-1"><Input v-model="settingsQuery" aria-label="搜索设置" placeholder="搜索设置，例如自动保存、字体…"/><div v-if="settingsQuery" class="absolute inset-x-3 top-full z-20"><ScrollArea class="h-64 rounded-lg border bg-popover shadow-lg"><div class="p-1"><Button v-for="item in settingsResults" :key="item.category+item.label" variant="ghost" class="w-full justify-start" @click="locate(item)">{{item.label}}<span class="ml-auto text-xs text-muted-foreground">{{categories.find(c=>c.value===item.category)?.label}}</span></Button><p v-if="!settingsResults.length" class="p-3 text-sm text-muted-foreground">没有匹配设置。</p></div></ScrollArea></div></div>
 
-          <div class="relative z-10 shrink-0 bg-[color-mix(in_srgb,var(--muted)_40%,var(--background))] px-6 pb-3 pt-3 sm:px-8"><div class="flex items-center justify-between gap-3"><h2 class="min-w-0 text-lg font-semibold tracking-tight">{{ currentCategory.label }}</h2><Button v-if="resetKeys[category]" variant="ghost" size="sm" class="shrink-0" :disabled="tagBusy" @click="resetCategory"><RotateCcwIcon data-icon="inline-start" />恢复此分类默认设置</Button></div><p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">{{ currentCategory.description }}</p></div>
-          <ScrollArea :key="category" class="min-h-0 flex-1">
-            <div class="px-6 pb-6 pt-3 sm:px-8">
+          <div class="relative z-10 shrink-0 px-3">
+            <Card class="gap-0 border-border/70 px-5 py-4">
+              <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                <div class="min-w-0"><h2 class="text-lg font-semibold tracking-tight">{{ currentCategory.label }}</h2><p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">{{ currentCategory.description }}</p></div>
+                <Button v-if="resetKeys[category]" variant="ghost" size="sm" class="shrink-0" :disabled="tagBusy" @click="resetCategory"><RotateCcwIcon data-icon="inline-start" />恢复此分类默认设置</Button>
+              </div>
+            </Card>
+          </div>
+          <ScrollArea :key="category" class="mt-3 min-h-0 flex-1">
+            <div class="px-3 pb-3">
 
 <TabsContent value="general" class="m-0 outline-none">
               <FieldGroup class="gap-0">
@@ -212,3 +219,15 @@ const shortcuts = [ ['搜索命令','Ctrl / Cmd + K'], ['新建文档','Ctrl / C
     </section>
 <TemplateHelpDialog v-model:open="templateHelp"/>
 </template>
+
+<style scoped>
+.settings-nav-item[aria-current="page"] {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
+.settings-nav-item[aria-current="page"]:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--primary);
+}
+</style>
